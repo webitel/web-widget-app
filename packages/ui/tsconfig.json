@@ -1,0 +1,13 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"paths": {
+			"@webitel/web-widget-core": [
+				"../core/src/index.ts"
+			]
+		}
+	},
+	"include": [
+		"src"
+	]
+}

@@ -1,0 +1,43 @@
+{
+	"name": "@webitel/web-widget-ui",
+	"version": "0.0.1",
+	"description": "Webitel web widget UI: ready chat window built on @webitel/web-widget-core",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/webitel/web-widget-app.git",
+		"directory": "packages/ui"
+	},
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "vite build && tsc -p tsconfig.build.json",
+		"typecheck": "tsc -p tsconfig.json",
+		"lint:package": "publint"
+	},
+	"peerDependencies": {
+		"@webitel/web-widget-core": "0.0.1"
+	},
+	"devDependencies": {
+		"@webitel/web-widget-core": "0.0.1"
+	},
+	"keywords": [
+		"webitel",
+		"chat",
+		"widget",
+		"web-component"
+	],
+	"author": "webitel",
+	"publishConfig": {
+		"access": "public"
+	}
+}

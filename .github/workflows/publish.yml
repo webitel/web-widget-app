@@ -1,0 +1,65 @@
+name: Webitel web-widget pkg publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Version bump
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      version_tag:
+        description: Version tag
+        required: true
+        default: latest
+        type: choice
+        options:
+          - latest
+          - next
+
+jobs:
+  publish:
+    permissions:
+      id-token: write  # Required for OIDC, https://docs.npmjs.com/trusted-publishers#github-actions-configuration
+      contents: write
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Use Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - run: npm ci
+
+      - name: Bump version
+        env:
+          RELEASE: ${{ inputs.release }}
+        run: |
+          npm version "$RELEASE" --workspaces --no-git-tag-version --no-workspaces-update
+          version="$(jq -r .version packages/core/package.json)"
+          npm pkg set "peerDependencies.@webitel/web-widget-core=$version" "devDependencies.@webitel/web-widget-core=$version" --workspace @webitel/web-widget-ui
+          npm install --package-lock-only
+          echo "VERSION=v$version" >> "$GITHUB_ENV"
+
+      - run: npm run build
+      - run: npm run lint:package
+
+      - name: Publish
+        env:
+          VERSION_TAG: ${{ inputs.version_tag }}
+        run: npm publish --workspaces --access public --tag "$VERSION_TAG"
+
+      - uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: 'ci: publish @webitel/web-widget ${{ env.VERSION }}'
+          commit_options: '--no-verify'

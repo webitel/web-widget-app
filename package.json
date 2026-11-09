@@ -1,0 +1,39 @@
+{
+	"name": "web-widget",
+	"private": true,
+	"type": "module",
+	"workspaces": [
+		"./packages/core",
+		"./packages/ui"
+	],
+	"scripts": {
+		"build": "npm run build --workspaces",
+		"test": "vitest run --passWithNoTests",
+		"test:watch": "vitest",
+		"typecheck": "npm run typecheck --workspaces",
+		"lint": "biome ci .",
+		"lint:fix": "biome check --write .",
+		"lint:package": "npm run lint:package --workspaces",
+		"dev:example": "vite examples/vanilla",
+		"lint:ci": "biome ci . --reporter=github",
+		"prepare": "husky || true"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.16",
+		"happy-dom": "^21.0.4",
+		"husky": "^9.1.7",
+		"lint-staged": "^16.4.0",
+		"publint": "^0.3.16",
+		"typescript": "~5.9.3",
+		"vite": "^8.0.0",
+		"vitest": "^4.0.0"
+	},
+	"engines": {
+		"node": "v24",
+		"npm": "11"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/webitel/web-widget-app.git"
+	}
+}
