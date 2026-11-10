@@ -1,6 +1,6 @@
 import { statusError, WidgetError } from '../shared/errors';
 import { parseBody } from '../shared/parse-body';
-import type { AuthProvider, CaptchaProvider } from '../types/auth';
+import type { AuthProvider, CaptchaOptions } from '../types/auth';
 import { type UploadProgress, upload } from './upload';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -27,10 +27,7 @@ export interface HttpUploadRequest {
 export interface HttpClientOptions {
 	baseUrl: string;
 	auth: AuthProvider;
-	captcha?: {
-		provider: CaptchaProvider;
-		header: string;
-	};
+	captcha?: CaptchaOptions;
 	tokenHeader?: string;
 }
 

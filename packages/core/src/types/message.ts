@@ -1,4 +1,14 @@
-export type MessageAuthor = 'client' | 'contact-centre' | 'system';
+export type MessageType =
+	| 'text'
+	| 'image'
+	| 'document'
+	| 'system'
+	| 'interactive'
+	| 'location'
+	| 'contact'
+	| 'unknown';
+
+export type MessageAuthor = 'client' | 'operator' | 'bot' | 'system';
 
 export type MessageStatus =
 	| 'sending'
@@ -9,23 +19,35 @@ export type MessageStatus =
 
 export interface MessageFile {
 	id: string;
-	name: string;
-	mimeType: string;
-	size: number;
-	url?: string;
+	name: string | undefined;
+	mimeType: string | undefined;
+	size: number | undefined;
+	url: string | undefined;
+}
+
+export interface MessageReaction {
+	emoji: string;
+	count: number;
+	reactedByMe: boolean;
 }
 
 export interface Message {
 	id: string;
-	sendId?: string;
+	sendId: string | undefined;
+	threadId: string | undefined;
+	seq: number | undefined;
+	type: MessageType;
 	author: MessageAuthor;
-	text?: string;
-	files?: MessageFile[];
+	senderName: string | undefined;
+	text: string;
+	images: MessageFile[];
+	files: MessageFile[];
+	replyToId: string | undefined;
 	createdAt: number;
-	version?: number;
+	editedAt: number | undefined;
+	deletedAt: number | undefined;
+	version: number;
 	status: MessageStatus;
-	replyToId?: string;
-	editedAt?: number;
-	deletedAt?: number;
-	reactions?: Record<string, number>;
+	reactions: MessageReaction[];
+	raw: unknown;
 }

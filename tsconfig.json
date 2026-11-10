@@ -1,0 +1,19 @@
+{
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"declaration": false,
+		"isolatedDeclarations": false,
+		"paths": {
+			"@webitel/web-widget-core": [
+				"./packages/core/src/index.ts"
+			],
+			"@webitel/web-widget-ui": [
+				"./packages/ui/src/index.ts"
+			]
+		}
+	},
+	"include": [
+		"mocks",
+		"examples"
+	]
+}

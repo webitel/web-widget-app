@@ -35,6 +35,17 @@ export class WidgetError extends Error {
 	}
 }
 
+export function toWidgetError(error: unknown): WidgetError {
+	if (error instanceof WidgetError) return error;
+	return new WidgetError(
+		'unknown',
+		error instanceof Error ? error.message : String(error),
+		{
+			cause: error,
+		},
+	);
+}
+
 export function statusError(
 	status: number,
 	details: unknown,

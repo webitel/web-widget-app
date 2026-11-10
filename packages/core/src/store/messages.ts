@@ -19,6 +19,13 @@ export function canChangeStatus(
 	return statusRank[next] > statusRank[current];
 }
 
+export function findMessage(
+	list: MessageList,
+	key: string,
+): Message | undefined {
+	return list.find((message) => hasKey(message, key));
+}
+
 export function upsertMessage(
 	list: MessageList,
 	incoming: Message,
@@ -31,9 +38,8 @@ export function upsertMessage(
 		]);
 	}
 
-	const isNewer = (incoming.version ?? 0) >= (existing.version ?? 0);
 	const merged: Message = {
-		...(isNewer ? incoming : existing),
+		...(incoming.version >= existing.version ? incoming : existing),
 		status: canChangeStatus(existing.status, incoming.status)
 			? incoming.status
 			: existing.status,
@@ -45,16 +51,25 @@ export function upsertMessage(
 	]);
 }
 
+export function updateMessage(
+	list: MessageList,
+	key: string,
+	update: (message: Message) => Message,
+): MessageList {
+	const target = findMessage(list, key);
+	if (!target) return list;
+	const updated = update(target);
+	if (updated === target) return list;
+	return list.map((message) => (message === target ? updated : message));
+}
+
 export function setMessageStatus(
 	list: MessageList,
 	key: string,
 	status: MessageStatus,
 ): MessageList {
-	const target = list.find((message) => hasKey(message, key));
-	if (!target || !canChangeStatus(target.status, status)) return list;
-
-	return list.map((message) =>
-		message === target
+	return updateMessage(list, key, (message) =>
+		canChangeStatus(message.status, status)
 			? {
 					...message,
 					status,
@@ -63,10 +78,39 @@ export function setMessageStatus(
 	);
 }
 
-export function removeMessage(list: MessageList, key: string): MessageList {
-	const target = list.find((message) => hasKey(message, key));
-	if (!target) return list;
-	return list.filter((message) => message !== target);
+export function deleteMessage(
+	list: MessageList,
+	key: string,
+	deletedAt: number | undefined,
+): MessageList {
+	return updateMessage(list, key, (message) => ({
+		...message,
+		text: '',
+		images: [],
+		files: [],
+		deletedAt: deletedAt ?? Date.now(),
+	}));
+}
+
+export function setOwnStatusUpTo(
+	list: MessageList,
+	status: 'delivered' | 'read',
+	upToSeq: number,
+): MessageList {
+	let changed = false;
+	const next = list.map((message) => {
+		const reached =
+			message.author === 'client' &&
+			message.seq !== undefined &&
+			message.seq <= upToSeq;
+		if (!reached || !canChangeStatus(message.status, status)) return message;
+		changed = true;
+		return {
+			...message,
+			status,
+		};
+	});
+	return changed ? next : list;
 }
 
 function hasKey(message: Message, key: string): boolean {
