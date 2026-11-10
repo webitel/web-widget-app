@@ -1,6 +1,6 @@
 import { upsertMessage } from '../../store/messages';
 import type { Message } from '../../types/message';
-import { decodeMessage } from '../../wire/message';
+import { decodeMessages } from '../../wire/message';
 import { field, readList, readString } from '../../wire/read';
 import type { FeatureContext } from '../context';
 
@@ -34,9 +34,7 @@ export function createHistoryFeature(ctx: FeatureContext): HistoryFeature {
 			},
 		});
 		return {
-			messages: readList(response, 'items').flatMap(
-				(item) => decodeMessage(item, session.self) ?? [],
-			),
+			messages: decodeMessages(readList(response, 'items'), session.self),
 			olderCursor: readString(field(response, 'next_cursor'), 'id'),
 			updatesCursor: readString(response, 'updates_cursor'),
 		};
@@ -56,18 +54,20 @@ export function createHistoryFeature(ctx: FeatureContext): HistoryFeature {
 		const page = threadId ? await fetchPage(threadId) : undefined;
 		olderCursor = page?.olderCursor;
 
-		store.setState((state) => {
-			const unsent = state.messages.filter(
-				(message) =>
-					message.status === 'sending' || message.status === 'failed',
-			);
-			return {
-				...state,
-				threadId,
-				hasOlder: olderCursor !== undefined,
-				messages: (page?.messages ?? []).reduce(upsertMessage, unsent),
-			};
-		});
+		const messages = page?.messages ?? [];
+		const latestSeq = Math.max(
+			0,
+			...messages.map((message) => message.seq ?? 0),
+		);
+		store.setState((state) => ({
+			...state,
+			threadId,
+			hasOlder: olderCursor !== undefined,
+			messages: messages.reduce(
+				upsertMessage,
+				state.messages.filter((message) => isNewer(message, latestSeq)),
+			),
+		}));
 		ctx.cursor.save(
 			page?.updatesCursor ?? readString(threads, 'updates_cursor'),
 		);
@@ -95,4 +95,10 @@ export function createHistoryFeature(ctx: FeatureContext): HistoryFeature {
 			return loadingOlder;
 		},
 	};
+}
+
+function isNewer(message: Message, latestSeq: number): boolean {
+	return message.seq === undefined
+		? message.status === 'sending' || message.status === 'failed'
+		: message.seq > latestSeq;
 }

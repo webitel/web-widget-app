@@ -5,7 +5,12 @@ import type {
 	MessageReaction,
 	MessageType,
 } from '../types/message';
-import { type Identity, isSameIdentity, readIdentity } from './identity';
+import {
+	contactOf,
+	type Identity,
+	isSameIdentity,
+	readIdentity,
+} from './identity';
 import {
 	field,
 	readBoolean,
@@ -32,7 +37,7 @@ export function decodeMessage(
 	const id = readString(source, 'id');
 	if (!id) return undefined;
 
-	const contact = field(field(source, 'sender'), 'contact');
+	const contact = contactOf(source, 'sender');
 	const type = decodeType(source);
 	const createdAt = readTime(source, 'created_at') ?? Date.now();
 
@@ -58,6 +63,13 @@ export function decodeMessage(
 		reactions: decodeReactions(readList(source, 'reactions')),
 		raw: source,
 	};
+}
+
+export function decodeMessages(
+	list: unknown[],
+	self: Identity | undefined,
+): Message[] {
+	return list.flatMap((item) => decodeMessage(item, self) ?? []);
 }
 
 export function decodeReactions(list: unknown[]): MessageReaction[] {

@@ -3,8 +3,8 @@ import type { HistoryFeature } from '../features/history';
 import { toWidgetError } from '../shared/errors';
 import { withHorizon, withMessages, withThread } from '../store/chat';
 import { deleteMessage, upsertMessage } from '../store/messages';
-import { isSameIdentity, readIdentity } from '../wire/identity';
-import { decodeMessage } from '../wire/message';
+import { contactOf, isSameIdentity, readIdentity } from '../wire/identity';
+import { decodeMessages } from '../wire/message';
 import {
 	field,
 	readBoolean,
@@ -57,9 +57,7 @@ export function createSync(
 
 		store.setState(withThread(threadId));
 
-		const messages = readList(thread, 'messages').flatMap(
-			(item) => decodeMessage(item, session.self) ?? [],
-		);
+		const messages = decodeMessages(readList(thread, 'messages'), session.self);
 		const deleted = readList(thread, 'deleted_messages');
 		store.setState(
 			withMessages((list) => {
@@ -74,7 +72,7 @@ export function createSync(
 		);
 
 		for (const readState of readList(thread, 'read_states')) {
-			const member = readIdentity(field(field(readState, 'member'), 'contact'));
+			const member = readIdentity(contactOf(readState, 'member'));
 			const isSelf = isSameIdentity(member, session.self);
 			const delivered = readNumber(readState, 'delivered_up_to_seq');
 			const read = readNumber(readState, 'read_up_to_seq');
@@ -114,10 +112,7 @@ export function createSync(
 				catchUp().catch(report);
 			}
 		}
-		if (event.type === 'resync' && ready) {
-			cursor.save(event.cursor);
-			catchUp().catch(report);
-		}
+		if (event.type === 'resync' && ready) catchUp().catch(report);
 	});
 
 	return {

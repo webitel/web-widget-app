@@ -1,5 +1,5 @@
 import type { MessageReaction } from '../types/message';
-import { type Identity, readIdentity } from './identity';
+import { contactOf, type Identity, readIdentity } from './identity';
 import { decodeReactions } from './message';
 import { field, readList, readNumber, readString, readTime } from './read';
 
@@ -121,7 +121,7 @@ function decodeEvent(name: string, body: unknown): ServerEvent {
 			return {
 				type: 'message_status',
 				status: readString(body, 'status'),
-				member: readIdentity(field(field(body, 'member'), 'contact')),
+				member: readIdentity(contactOf(body, 'member')),
 				messageId: readString(body, 'message_id'),
 				upToSeq: readNumber(body, 'up_to_seq'),
 			};
@@ -134,7 +134,7 @@ function decodeEvent(name: string, body: unknown): ServerEvent {
 		case 'typing_event':
 			return {
 				type: 'typing',
-				name: readString(field(field(body, 'from'), 'contact'), 'name'),
+				name: readString(contactOf(body, 'from'), 'name'),
 				timeoutMs: readNumber(body, 'timeout_ms') ?? 0,
 			};
 		default:

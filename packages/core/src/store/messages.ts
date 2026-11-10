@@ -78,6 +78,22 @@ export function setMessageStatus(
 	);
 }
 
+export function confirmMessage(
+	list: MessageList,
+	sendId: string,
+	id: string,
+): MessageList {
+	const withId = updateMessage(list, sendId, (message) =>
+		message.id === sendId
+			? {
+					...message,
+					id,
+				}
+			: message,
+	);
+	return setMessageStatus(withId, sendId, 'sent');
+}
+
 export function deleteMessage(
 	list: MessageList,
 	key: string,

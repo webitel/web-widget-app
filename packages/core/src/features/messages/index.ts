@@ -1,6 +1,7 @@
 import { toWidgetError } from '../../shared/errors';
 import { withMessages, withThread } from '../../store/chat';
 import {
+	confirmMessage,
 	deleteMessage,
 	findMessage,
 	setMessageStatus,
@@ -31,18 +32,14 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 				body: {
 					body: message.text,
 					send_id: sendId,
-					...(threadId
+					to: threadId
 						? {
-								to: {
-									thread_id: threadId,
-								},
+								thread_id: threadId,
 							}
 						: {
-								to: {
-									channel_id: ctx.options.channelId,
-								},
-								variables: session.variables,
-							}),
+								channel_id: ctx.options.channelId,
+							},
+					variables: threadId ? undefined : session.variables,
 				},
 			});
 
@@ -50,22 +47,7 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 			store.setState(
 				withThread(readString(field(response, 'to'), 'thread_id')),
 			);
-			store.setState(
-				withMessages((list) =>
-					setMessageStatus(
-						updateMessage(list, sendId, (current) =>
-							current.id === sendId
-								? {
-										...current,
-										id,
-									}
-								: current,
-						),
-						sendId,
-						'sent',
-					),
-				),
-			);
+			store.setState(withMessages((list) => confirmMessage(list, sendId, id)));
 		} catch (error) {
 			store.setState(
 				withMessages((list) => setMessageStatus(list, sendId, 'failed')),
@@ -144,28 +126,7 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 			const body = text.trim();
 			if (!body) return;
 
-			const sendId = crypto.randomUUID();
-			const message: Message = {
-				id: sendId,
-				sendId,
-				threadId: store.getSnapshot().threadId,
-				seq: undefined,
-				type: 'text',
-				author: 'client',
-				senderName: undefined,
-				text: body,
-				images: [],
-				files: [],
-				replyToId: undefined,
-				createdAt: Date.now(),
-				editedAt: undefined,
-				deletedAt: undefined,
-				version: 0,
-				status: 'sending',
-				reactions: [],
-				raw: undefined,
-			};
-
+			const message = createOutgoingMessage(body, store.getSnapshot().threadId);
 			store.setState(withMessages((list) => upsertMessage(list, message)));
 			await deliver(message);
 		},
@@ -177,5 +138,32 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 			);
 			await deliver(message);
 		},
+	};
+}
+
+function createOutgoingMessage(
+	text: string,
+	threadId: string | undefined,
+): Message {
+	const sendId = crypto.randomUUID();
+	return {
+		id: sendId,
+		sendId,
+		threadId,
+		seq: undefined,
+		type: 'text',
+		author: 'client',
+		senderName: undefined,
+		text,
+		images: [],
+		files: [],
+		replyToId: undefined,
+		createdAt: Date.now(),
+		editedAt: undefined,
+		deletedAt: undefined,
+		version: 0,
+		status: 'sending',
+		reactions: [],
+		raw: undefined,
 	};
 }
