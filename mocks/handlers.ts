@@ -27,6 +27,23 @@ type Peer = typeof client;
 interface SendTextBody {
 	body: string;
 	send_id?: string;
+	reply_to_message_id?: string;
+}
+
+interface EditBody {
+	body: string;
+}
+
+interface DeleteBody {
+	ids: string[];
+}
+
+interface ReactionBody {
+	emoji: string;
+}
+
+interface CallbackBody {
+	button_code: string;
 }
 
 interface UpdatesBody {
@@ -42,6 +59,16 @@ interface MockMessage {
 	type: 'text';
 	body: string;
 	sender: Peer;
+	version: number;
+	edited_at?: number;
+	deleted?: boolean;
+	reply_to:
+		| {
+				message_id: string;
+				body: string;
+				sender: Peer;
+		  }
+		| undefined;
 }
 
 const messages: Array<{
@@ -63,7 +90,16 @@ const envelope = (payload: object) =>
 
 const broadcast = (payload: object) => im.broadcast(envelope(payload));
 
-const addMessage = (sender: Peer, body: string, sendId?: string) => {
+const findMessage = (id: string) =>
+	messages.find((item) => item.message.id === id)?.message;
+
+const addMessage = (
+	sender: Peer,
+	body: string,
+	sendId?: string,
+	replyToId?: string,
+) => {
+	const quoted = replyToId ? findMessage(replyToId) : undefined;
 	seq += 1;
 	cursor += 1;
 	const message: MockMessage = {
@@ -75,6 +111,12 @@ const addMessage = (sender: Peer, body: string, sendId?: string) => {
 		type: 'text',
 		body,
 		sender,
+		version: 1,
+		reply_to: quoted && {
+			message_id: quoted.id,
+			body: quoted.body,
+			sender: quoted.sender,
+		},
 	};
 	messages.push({
 		cursor,
@@ -176,10 +218,10 @@ export const handlers = [
 	http.post<never, SendTextBody>(
 		`${MOCK_BASE_URL}/v1/messages/text`,
 		async ({ request }) => {
-			const { body, send_id } = await request.json();
+			const { body, send_id, reply_to_message_id } = await request.json();
 			await delay(150);
 			threadExists = true;
-			const message = addMessage(client, body, send_id);
+			const message = addMessage(client, body, send_id, reply_to_message_id);
 			replyTo(message);
 			return HttpResponse.json({
 				id: message.id,
@@ -207,6 +249,111 @@ export const handlers = [
 				],
 			});
 		},
+	),
+
+	http.patch<
+		{
+			id: string;
+		},
+		EditBody
+	>(`${MOCK_BASE_URL}/v1/messages/:id`, async ({ params, request }) => {
+		const { body } = await request.json();
+		const message = findMessage(params.id);
+		if (!message)
+			return new HttpResponse(null, {
+				status: 404,
+			});
+		message.body = body;
+		message.version += 1;
+		message.edited_at = Date.now();
+		broadcast({
+			message_edited_event: {
+				id: message.id,
+				thread_id: THREAD_ID,
+				body,
+				version: message.version,
+				edited_at: message.edited_at,
+			},
+		});
+		return HttpResponse.json({
+			id: message.id,
+			version: message.version,
+			edited_at: String(message.edited_at),
+		});
+	}),
+
+	http.post<never, DeleteBody>(
+		`${MOCK_BASE_URL}/v1/messages/delete`,
+		async ({ request }) => {
+			const { ids } = await request.json();
+			const deletedAt = Date.now();
+			const deleted = ids.flatMap((id) => {
+				const message = findMessage(id);
+				if (!message) return [];
+				message.body = '';
+				message.deleted = true;
+				broadcast({
+					message_deleted_event: {
+						id,
+						thread_id: THREAD_ID,
+						deleted_at: deletedAt,
+					},
+				});
+				return [
+					id,
+				];
+			});
+			return HttpResponse.json({
+				deleted_ids: deleted,
+				deleted_at: String(deletedAt),
+			});
+		},
+	),
+
+	http.post<
+		{
+			id: string;
+		},
+		ReactionBody
+	>(
+		`${MOCK_BASE_URL}/v1/messages/:id/reaction`,
+		async ({ params, request }) => {
+			const { emoji } = await request.json();
+			broadcast({
+				message_reaction_event: {
+					message_id: params.id,
+					thread_id: THREAD_ID,
+					reactions: emoji
+						? [
+								{
+									emoji,
+									count: 1,
+									reacted_by_me: true,
+								},
+							]
+						: [],
+				},
+			});
+			return HttpResponse.json({});
+		},
+	),
+
+	http.post<
+		{
+			id: string;
+		},
+		CallbackBody
+	>(
+		`${MOCK_BASE_URL}/v1/messages/interactive/:id/callback`,
+		async ({ request }) => {
+			const { button_code } = await request.json();
+			setTimeout(() => addMessage(operator, `You pressed ${button_code}`), 500);
+			return HttpResponse.json({});
+		},
+	),
+
+	http.post(`${MOCK_BASE_URL}/v1/threads/:threadId/typing`, () =>
+		HttpResponse.json({}),
 	),
 
 	http.post(`${MOCK_BASE_URL}/v1/threads/:threadId/variables`, () =>

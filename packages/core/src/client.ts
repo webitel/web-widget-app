@@ -1,7 +1,10 @@
 import type { FeatureContext, Session } from './features/context';
 import { createHistoryFeature } from './features/history';
+import { createInteractiveFeature } from './features/interactive';
 import { createMessagesFeature } from './features/messages';
+import { createReactionsFeature } from './features/reactions';
 import { createReceiptsFeature } from './features/receipts';
+import { createTypingFeature } from './features/typing';
 import { createVariablesFeature } from './features/variables';
 import { createEmitter } from './shared/emitter';
 import { createStorage } from './shared/storage';
@@ -73,18 +76,23 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 	const messages = createMessagesFeature(ctx);
 	const receipts = createReceiptsFeature(ctx);
 	const variables = createVariablesFeature(ctx);
+	const reactions = createReactionsFeature(ctx);
+	const typing = createTypingFeature(ctx);
+	const interactive = createInteractiveFeature(ctx);
 
 	return {
 		get connectionState() {
 			return connectionState;
 		},
 		messages: {
-			send: messages.send,
-			retry: messages.retry,
+			...messages,
 			loadOlder: history.loadOlder,
 			markRead: receipts.markRead,
 		},
 		variables,
+		reactions,
+		typing,
+		interactive,
 		async connect() {
 			await socket.connect();
 			await sync.load();

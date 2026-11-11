@@ -3,6 +3,7 @@ import type {
 	MessageAuthor,
 	MessageFile,
 	MessageReaction,
+	MessageReply,
 	MessageType,
 } from '../types/message';
 import {
@@ -52,7 +53,7 @@ export function decodeMessage(
 		text: readString(source, 'body') ?? '',
 		images: readList(source, 'images').map(decodeFile),
 		files: readList(source, 'documents').map(decodeFile),
-		replyToId: readString(field(source, 'reply_to'), 'message_id'),
+		replyTo: decodeReply(field(source, 'reply_to')),
 		createdAt,
 		editedAt: readTime(source, 'edited_at'),
 		deletedAt:
@@ -108,6 +109,17 @@ function decodeAuthor(
 	if (readBoolean(contact, 'is_bot')) return 'bot';
 	if (isSameIdentity(readIdentity(contact), self)) return 'client';
 	return 'operator';
+}
+
+function decodeReply(source: unknown): MessageReply | undefined {
+	const id = readString(source, 'message_id');
+	if (!id) return undefined;
+	return {
+		id,
+		text: readString(source, 'body') ?? '',
+		senderName: readString(contactOf(source, 'sender'), 'name'),
+		deleted: readBoolean(source, 'is_deleted'),
+	};
 }
 
 function decodeFile(source: unknown): MessageFile {

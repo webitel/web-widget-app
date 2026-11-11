@@ -14,12 +14,15 @@ const template = `
 		ul { list-style: none; margin: 0; padding: 8px; height: 320px; overflow: auto; }
 		li { margin: 4px 0; }
 		li.client { text-align: right; }
-		small { color: #888; }
+		small, blockquote { color: #888; }
+		blockquote { margin: 0; padding-left: 6px; border-left: 2px solid #ccc; }
+		li button { font-size: 11px; }
 		input { flex: 1; }
 	</style>
 	<header><span id="state"></span><span id="typing"></span><span id="unread"></span></header>
 	<button id="older" hidden>Load older</button>
 	<ul></ul>
+	<div id="reply" hidden></div>
 	<form><input placeholder="Message" /><button>Send</button></form>
 `;
 
@@ -27,6 +30,7 @@ export class WebitelChatElement extends HTMLElement {
 	#client: WebWidgetClient | null = null;
 	#cleanup: Array<() => void> = [];
 	#typingTimer: ReturnType<typeof setTimeout> | undefined;
+	#replyTo: Message | undefined;
 
 	set client(client: WebWidgetClient | null) {
 		this.#unbind();
@@ -59,6 +63,13 @@ export class WebitelChatElement extends HTMLElement {
 			root
 				.querySelector('#older')
 				?.addEventListener('click', () => this.#client?.messages.loadOlder());
+			root
+				.querySelector('input')
+				?.addEventListener('input', () => this.#client?.typing.notify());
+			root.querySelector('#reply')?.addEventListener('click', () => {
+				this.#replyTo = undefined;
+				this.#render();
+			});
 		}
 		this.#render();
 	}
@@ -76,8 +87,14 @@ export class WebitelChatElement extends HTMLElement {
 		event.preventDefault();
 		const input = this.shadowRoot?.querySelector('input');
 		if (!input || !this.#client) return;
-		this.#client.messages.send(input.value).catch(() => {});
+		this.#client.messages
+			.send(input.value, {
+				replyTo: this.#replyTo?.id,
+			})
+			.catch(() => {});
 		input.value = '';
+		this.#replyTo = undefined;
+		this.#render();
 	}
 
 	#showTyping(name: string | undefined, timeoutMs: number) {
@@ -106,6 +123,12 @@ export class WebitelChatElement extends HTMLElement {
 		const older = root.querySelector<HTMLButtonElement>('#older');
 		if (older) older.hidden = !snapshot.hasOlder;
 
+		const reply = root.querySelector<HTMLElement>('#reply');
+		if (reply) {
+			reply.hidden = !this.#replyTo;
+			reply.textContent = `Reply to: ${this.#replyTo?.text ?? ''} ✕`;
+		}
+
 		const list = root.querySelector('ul');
 		list?.replaceChildren(
 			...snapshot.messages.map((message) => this.#renderMessage(message)),
@@ -117,21 +140,71 @@ export class WebitelChatElement extends HTMLElement {
 	#renderMessage(message: Message) {
 		const item = document.createElement('li');
 		item.className = message.author;
-		item.textContent = message.deletedAt ? '(deleted)' : message.text;
+
+		if (message.replyTo) {
+			const quote = document.createElement('blockquote');
+			quote.textContent = message.replyTo.text;
+			item.append(quote);
+		}
+
+		item.append(message.deletedAt ? '(deleted)' : message.text);
 
 		const meta = document.createElement('small');
-		meta.textContent = ` ${message.senderName ?? message.author} · ${message.status}`;
+		const edited = message.editedAt ? ' · edited' : '';
+		const reactions = message.reactions
+			.map((reaction) => `${reaction.emoji}${reaction.count}`)
+			.join(' ');
+		meta.textContent = ` ${message.senderName ?? message.author} · ${message.status}${edited} ${reactions}`;
 		item.append(meta);
 
-		if (message.status === 'failed') {
-			const retry = document.createElement('button');
-			retry.textContent = 'Retry';
-			retry.addEventListener('click', () => {
-				this.#client?.messages.retry(message.id).catch(() => {});
-			});
-			item.append(retry);
-		}
+		if (!message.deletedAt) item.append(...this.#renderActions(message));
 		return item;
+	}
+
+	#renderActions(message: Message) {
+		const client = this.#client;
+		if (!client) return [];
+
+		const action = (label: string, run: () => Promise<void> | void) => {
+			const button = document.createElement('button');
+			button.textContent = label;
+			button.addEventListener('click', () => {
+				Promise.resolve(run()).catch(() => {});
+			});
+			return button;
+		};
+
+		if (message.status === 'failed') {
+			return [
+				action('Retry', () => client.messages.retry(message.id)),
+				action('Delete', () => client.messages.delete(message.id)),
+			];
+		}
+
+		const liked = message.reactions.some(
+			(reaction) => reaction.emoji === '👍' && reaction.reactedByMe,
+		);
+		const actions = [
+			action('Reply', () => {
+				this.#replyTo = message;
+				this.#render();
+			}),
+			action(liked ? 'Unlike' : '👍', () =>
+				liked
+					? client.reactions.clear(message.id)
+					: client.reactions.set(message.id, '👍'),
+			),
+		];
+		if (message.author === 'client') {
+			actions.push(
+				action('Edit', () => {
+					const text = prompt('Edit message', message.text);
+					return text ? client.messages.edit(message.id, text) : undefined;
+				}),
+				action('Delete', () => client.messages.delete(message.id)),
+			);
+		}
+		return actions;
 	}
 }
 

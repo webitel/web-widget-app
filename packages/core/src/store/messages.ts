@@ -94,6 +94,32 @@ export function confirmMessage(
 	return setMessageStatus(withId, sendId, 'sent');
 }
 
+export interface MessageEdit {
+	text: string;
+	version: number;
+	editedAt: number | undefined;
+}
+
+export function editMessage(
+	list: MessageList,
+	key: string,
+	edit: MessageEdit,
+): MessageList {
+	return updateMessage(list, key, (message) =>
+		edit.version >= message.version
+			? {
+					...message,
+					...edit,
+				}
+			: message,
+	);
+}
+
+export function removeMessage(list: MessageList, key: string): MessageList {
+	const target = findMessage(list, key);
+	return target ? list.filter((message) => message !== target) : list;
+}
+
 export function deleteMessage(
 	list: MessageList,
 	key: string,

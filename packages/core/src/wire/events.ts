@@ -47,6 +47,7 @@ export type ServerEvent =
 	  }
 	| {
 			type: 'typing';
+			from: Identity | undefined;
 			name: string | undefined;
 			timeoutMs: number;
 	  }
@@ -134,6 +135,7 @@ function decodeEvent(name: string, body: unknown): ServerEvent {
 		case 'typing_event':
 			return {
 				type: 'typing',
+				from: readIdentity(contactOf(body, 'from')),
 				name: readString(contactOf(body, 'from'), 'name'),
 				timeoutMs: readNumber(body, 'timeout_ms') ?? 0,
 			};

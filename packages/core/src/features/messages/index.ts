@@ -1,22 +1,30 @@
-import { toWidgetError } from '../../shared/errors';
+import { toWidgetError, WidgetError } from '../../shared/errors';
 import { withMessages, withThread } from '../../store/chat';
 import {
 	confirmMessage,
 	deleteMessage,
+	editMessage,
 	findMessage,
+	removeMessage,
 	setMessageStatus,
-	updateMessage,
 	upsertMessage,
 } from '../../store/messages';
-import type { Message } from '../../types/message';
+import type { MessagesApi } from '../../types/client';
+import type { Message, MessageReply } from '../../types/message';
 import { decodeMessage } from '../../wire/message';
-import { field, readString } from '../../wire/read';
+import {
+	field,
+	readList,
+	readNumber,
+	readString,
+	readTime,
+} from '../../wire/read';
 import type { FeatureContext } from '../context';
 
-export interface MessagesFeature {
-	send(text: string): Promise<void>;
-	retry(id: string): Promise<void>;
-}
+export type MessagesFeature = Pick<
+	MessagesApi,
+	'send' | 'retry' | 'edit' | 'delete'
+>;
 
 export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 	const { http, store, session } = ctx;
@@ -40,6 +48,7 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 								channel_id: ctx.options.channelId,
 							},
 					variables: threadId ? undefined : session.variables,
+					reply_to_message_id: message.replyTo?.id,
 				},
 			});
 
@@ -77,16 +86,11 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 				if (!messageId) return;
 				store.setState(
 					withMessages((list) =>
-						updateMessage(list, messageId, (message) =>
-							version >= message.version
-								? {
-										...message,
-										text,
-										version,
-										editedAt,
-									}
-								: message,
-						),
+						editMessage(list, messageId, {
+							text,
+							version,
+							editedAt,
+						}),
 					),
 				);
 				return;
@@ -99,34 +103,19 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 				);
 				return;
 			}
-			case 'reaction': {
-				const { messageId, reactions } = event;
-				if (!messageId) return;
-				store.setState(
-					withMessages((list) =>
-						updateMessage(list, messageId, (message) => ({
-							...message,
-							reactions,
-						})),
-					),
-				);
-				return;
-			}
-			case 'typing':
-				ctx.emitter.emit('typing', {
-					name: event.name,
-					timeoutMs: event.timeoutMs,
-				});
-				return;
 		}
 	});
 
 	return {
-		async send(text) {
+		async send(text, options = {}) {
 			const body = text.trim();
 			if (!body) return;
 
-			const message = createOutgoingMessage(body, store.getSnapshot().threadId);
+			const { threadId, messages } = store.getSnapshot();
+			const replyTo = options.replyTo
+				? toReply(findMessage(messages, options.replyTo))
+				: undefined;
+			const message = createOutgoingMessage(body, threadId, replyTo);
 			store.setState(withMessages((list) => upsertMessage(list, message)));
 			await deliver(message);
 		},
@@ -138,12 +127,71 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 			);
 			await deliver(message);
 		},
+		async edit(id, text) {
+			const body = text.trim();
+			if (!body) return;
+
+			const response = await http.request({
+				method: 'PATCH',
+				path: `v1/messages/${id}`,
+				body: {
+					body,
+				},
+			});
+			store.setState(
+				withMessages((list) =>
+					editMessage(list, id, {
+						text: body,
+						version: readNumber(response, 'version') ?? 0,
+						editedAt: readTime(response, 'edited_at'),
+					}),
+				),
+			);
+		},
+		async delete(id) {
+			const message = findMessage(store.getSnapshot().messages, id);
+			if (message?.status === 'failed') {
+				store.setState(withMessages((list) => removeMessage(list, id)));
+				return;
+			}
+
+			const response = await http.request({
+				method: 'POST',
+				path: 'v1/messages/delete',
+				body: {
+					ids: [
+						id,
+					],
+				},
+			});
+			if (!readList(response, 'deleted_ids').includes(id)) {
+				throw new WidgetError('unknown', 'Message was not deleted', {
+					details: readList(response, 'skipped'),
+				});
+			}
+			store.setState(
+				withMessages((list) =>
+					deleteMessage(list, id, readTime(response, 'deleted_at')),
+				),
+			);
+		},
+	};
+}
+
+function toReply(message: Message | undefined): MessageReply | undefined {
+	if (!message) return undefined;
+	return {
+		id: message.id,
+		text: message.text,
+		senderName: message.senderName,
+		deleted: message.deletedAt !== undefined,
 	};
 }
 
 function createOutgoingMessage(
 	text: string,
 	threadId: string | undefined,
+	replyTo: MessageReply | undefined,
 ): Message {
 	const sendId = crypto.randomUUID();
 	return {
@@ -157,7 +205,7 @@ function createOutgoingMessage(
 		text,
 		images: [],
 		files: [],
-		replyToId: undefined,
+		replyTo,
 		createdAt: Date.now(),
 		editedAt: undefined,
 		deletedAt: undefined,

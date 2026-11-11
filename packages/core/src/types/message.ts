@@ -31,6 +31,13 @@ export interface MessageReaction {
 	reactedByMe: boolean;
 }
 
+export interface MessageReply {
+	id: string;
+	text: string;
+	senderName: string | undefined;
+	deleted: boolean;
+}
+
 export interface Message {
 	id: string;
 	sendId: string | undefined;
@@ -42,7 +49,7 @@ export interface Message {
 	text: string;
 	images: MessageFile[];
 	files: MessageFile[];
-	replyToId: string | undefined;
+	replyTo: MessageReply | undefined;
 	createdAt: number;
 	editedAt: number | undefined;
 	deletedAt: number | undefined;

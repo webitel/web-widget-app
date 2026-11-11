@@ -41,11 +41,35 @@ export type ClientEvents = {
 	reset: undefined;
 };
 
+export interface SendOptions {
+	replyTo?: string | undefined;
+}
+
+export interface ButtonPress {
+	code: string;
+	data?: string | undefined;
+}
+
 export interface MessagesApi {
-	send(text: string): Promise<void>;
+	send(text: string, options?: SendOptions): Promise<void>;
 	retry(id: string): Promise<void>;
+	edit(id: string, text: string): Promise<void>;
+	delete(id: string): Promise<void>;
 	loadOlder(): Promise<void>;
 	markRead(): void;
+}
+
+export interface ReactionsApi {
+	set(messageId: string, emoji: string): Promise<void>;
+	clear(messageId: string): Promise<void>;
+}
+
+export interface TypingApi {
+	notify(): void;
+}
+
+export interface InteractiveApi {
+	press(messageId: string, button: ButtonPress): Promise<void>;
 }
 
 export interface VariablesApi {
@@ -57,6 +81,9 @@ export interface WebWidgetClient {
 	readonly connectionState: ConnectionState;
 	readonly messages: MessagesApi;
 	readonly variables: VariablesApi;
+	readonly reactions: ReactionsApi;
+	readonly typing: TypingApi;
+	readonly interactive: InteractiveApi;
 	connect(): Promise<void>;
 	disconnect(): void;
 	reset(): void;
