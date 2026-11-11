@@ -17,7 +17,6 @@ export interface ApiOptions {
 	http: HttpClient;
 	socket: Socket;
 	session: Session;
-	channelId: string;
 }
 
 export interface Api {

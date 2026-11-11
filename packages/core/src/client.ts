@@ -63,7 +63,6 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 		http: createHttpClient(options),
 		socket,
 		session,
-		channelId: options.channelId,
 	});
 
 	const ctx: FeatureContext = {

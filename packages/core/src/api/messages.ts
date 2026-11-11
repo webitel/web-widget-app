@@ -13,7 +13,6 @@ export function createMessagesApi({
 	http,
 	socket,
 	session,
-	channelId,
 }: ApiOptions): MessageEndpoints {
 	return {
 		async page(threadId, size, before) {
@@ -41,9 +40,7 @@ export function createMessagesApi({
 						? {
 								thread_id: threadId,
 							}
-						: {
-								channel_id: channelId,
-							},
+						: undefined,
 					variables:
 						threadId || content.type !== 'text' ? undefined : variables,
 					reply_to_message_id: replyToId,
