@@ -1,5 +1,6 @@
 import type { ChatState } from '../types/chat';
-import { setOwnStatusUpTo } from './messages';
+import type { Message } from '../types/message';
+import { mergeLatestPage, setOwnStatusUpTo, upsertMessage } from './messages';
 import type { MessageList, Reducer } from './types';
 
 export const initialChatState: ChatState = {
@@ -31,6 +32,30 @@ export function withThread(threadId: string | undefined): Reducer {
 					threadId,
 				}
 			: state;
+}
+
+export function withLatestPage(
+	threadId: string | undefined,
+	messages: readonly Message[],
+	hasOlder: boolean,
+): Reducer {
+	return (state) => ({
+		...state,
+		threadId,
+		hasOlder,
+		messages: mergeLatestPage(state.messages, messages),
+	});
+}
+
+export function withOlderPage(
+	messages: readonly Message[],
+	hasOlder: boolean,
+): Reducer {
+	return (state) => ({
+		...state,
+		hasOlder,
+		messages: messages.reduce(upsertMessage, state.messages),
+	});
 }
 
 export function withHorizon(

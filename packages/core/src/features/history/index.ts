@@ -1,5 +1,4 @@
-import { upsertMessage } from '../../store/messages';
-import type { Message } from '../../types/message';
+import { withLatestPage, withOlderPage } from '../../store/chat';
 import type { FeatureContext, HistoryFeature } from '../types';
 
 const PAGE_SIZE = 50;
@@ -18,20 +17,9 @@ export function createHistoryFeature(ctx: FeatureContext): HistoryFeature {
 			: undefined;
 		olderCursor = page?.olderCursor;
 
-		const messages = page?.messages ?? [];
-		const latestSeq = Math.max(
-			0,
-			...messages.map((message) => message.seq ?? 0),
+		store.setState(
+			withLatestPage(threadId, page?.messages ?? [], olderCursor !== undefined),
 		);
-		store.setState((state) => ({
-			...state,
-			threadId,
-			hasOlder: olderCursor !== undefined,
-			messages: messages.reduce(
-				upsertMessage,
-				state.messages.filter((message) => isNewer(message, latestSeq)),
-			),
-		}));
 		ctx.cursor.save(page?.updatesCursor ?? latest.updatesCursor);
 	};
 
@@ -41,11 +29,7 @@ export function createHistoryFeature(ctx: FeatureContext): HistoryFeature {
 
 		const page = await api.messages.page(threadId, PAGE_SIZE, olderCursor);
 		olderCursor = page.olderCursor;
-		store.setState((state) => ({
-			...state,
-			hasOlder: olderCursor !== undefined,
-			messages: page.messages.reduce(upsertMessage, state.messages),
-		}));
+		store.setState(withOlderPage(page.messages, olderCursor !== undefined));
 	};
 
 	return {
@@ -57,10 +41,4 @@ export function createHistoryFeature(ctx: FeatureContext): HistoryFeature {
 			return loadingOlder;
 		},
 	};
-}
-
-function isNewer(message: Message, latestSeq: number): boolean {
-	return message.seq === undefined
-		? message.status === 'sending' || message.status === 'failed'
-		: message.seq > latestSeq;
 }

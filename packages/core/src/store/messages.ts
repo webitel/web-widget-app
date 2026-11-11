@@ -148,6 +148,23 @@ export function setOwnStatusUpTo(
 	return changed ? next : list;
 }
 
+export function mergeLatestPage(
+	list: MessageList,
+	page: readonly Message[],
+): MessageList {
+	const latestSeq = Math.max(0, ...page.map((message) => message.seq ?? 0));
+	return page.reduce(
+		upsertMessage,
+		list.filter((message) => isNewer(message, latestSeq)),
+	);
+}
+
+function isNewer(message: Message, latestSeq: number): boolean {
+	return message.seq === undefined
+		? message.status === 'sending' || message.status === 'failed'
+		: message.seq > latestSeq;
+}
+
 function hasKey(message: Message, key: string): boolean {
 	return message.id === key || message.sendId === key;
 }
