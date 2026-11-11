@@ -1,13 +1,8 @@
-import type { ThreadUpdates } from '../api/updates';
-import type { FeatureContext } from '../features/context';
-import type { HistoryFeature } from '../features/history';
+import type { ThreadUpdates } from '../api/types';
+import type { FeatureContext, HistoryFeature } from '../features/types';
 import { withHorizon, withMessages, withThread } from '../store/chat';
 import { deleteMessage, upsertMessage } from '../store/messages';
-
-export interface Sync {
-	load(): Promise<void>;
-	reset(): void;
-}
+import type { Sync } from './types';
 
 export function createSync(
 	ctx: FeatureContext,

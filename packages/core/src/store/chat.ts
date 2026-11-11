@@ -1,7 +1,6 @@
 import type { ChatState } from '../types/chat';
-import { type MessageList, setOwnStatusUpTo } from './messages';
-
-type Reducer = (state: ChatState) => ChatState;
+import { setOwnStatusUpTo } from './messages';
+import type { MessageList, Reducer } from './types';
 
 export const initialChatState: ChatState = {
 	messages: [],

@@ -1,40 +1,12 @@
 import { statusError, WidgetError } from '../shared/errors';
 import { parseBody } from '../shared/parse-body';
-import type { AuthProvider, CaptchaOptions } from '../types/auth';
-import { type UploadProgress, upload } from './upload';
-
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-
-export type Query = Record<string, string | number | boolean | undefined>;
-
-export interface HttpRequest {
-	method?: HttpMethod;
-	path: string;
-	query?: Query;
-	body?: unknown;
-	signal?: AbortSignal;
-	captchaAction?: string;
-}
-
-export interface HttpUploadRequest {
-	path: string;
-	body: FormData | Blob;
-	signal?: AbortSignal;
-	captchaAction?: string;
-	onProgress?: (progress: UploadProgress) => void;
-}
-
-export interface HttpClientOptions {
-	baseUrl: string;
-	auth: AuthProvider;
-	captcha?: CaptchaOptions;
-	tokenHeader?: string;
-}
-
-export interface HttpClient {
-	request(request: HttpRequest): Promise<unknown>;
-	upload(request: HttpUploadRequest): Promise<unknown>;
-}
+import type {
+	HttpClient,
+	HttpClientOptions,
+	HttpRequest,
+	Query,
+} from './types';
+import { upload } from './upload';
 
 export function createHttpClient(options: HttpClientOptions): HttpClient {
 	const baseUrl = options.baseUrl.replace(/\/+$/, '');

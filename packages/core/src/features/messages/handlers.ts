@@ -4,7 +4,7 @@ import {
 	editMessage,
 	upsertMessage,
 } from '../../store/messages';
-import type { FeatureContext } from '../context';
+import type { FeatureContext } from '../types';
 
 export function subscribeMessageEvents(ctx: FeatureContext): void {
 	const { api, store } = ctx;

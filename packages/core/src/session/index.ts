@@ -1,13 +1,6 @@
 import type { Variables } from '../types/client';
-import type { Identity } from '../wire/identity';
-
-export interface Session {
-	readonly self: Identity | undefined;
-	readonly variables: Variables;
-	identify(): Promise<void>;
-	addVariables(variables: Variables): void;
-	reset(): void;
-}
+import type { Identity } from '../wire/types';
+import type { Session } from './types';
 
 export function createSession(
 	whoAmI: () => Promise<Identity | undefined>,

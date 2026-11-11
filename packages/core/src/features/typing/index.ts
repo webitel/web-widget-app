@@ -1,6 +1,6 @@
 import type { TypingApi } from '../../types/client';
 import { isSameIdentity } from '../../wire/identity';
-import type { FeatureContext } from '../context';
+import type { FeatureContext } from '../types';
 
 const NOTIFY_INTERVAL = 3000;
 

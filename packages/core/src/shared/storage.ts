@@ -1,14 +1,5 @@
 import type { KeyValueStorage } from '../types/storage';
-
-type StorageBackend = Pick<
-	Storage,
-	'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'
->;
-
-export interface CreateStorageOptions {
-	prefix?: string;
-	backend?: StorageBackend | null;
-}
+import type { CreateStorageOptions, StorageBackend } from './types';
 
 function getLocalStorage(): StorageBackend | null {
 	try {

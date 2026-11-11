@@ -1,7 +1,7 @@
 import { withMessages } from '../../store/chat';
 import { updateMessage } from '../../store/messages';
 import type { ReactionsApi } from '../../types/client';
-import type { FeatureContext } from '../context';
+import type { FeatureContext } from '../types';
 
 export function createReactionsFeature(ctx: FeatureContext): ReactionsApi {
 	const { api, store } = ctx;

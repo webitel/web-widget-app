@@ -1,19 +1,4 @@
-export type WidgetErrorCode =
-	| 'network'
-	| 'auth'
-	| 'captcha'
-	| 'forbidden_file'
-	| 'file_too_large'
-	| 'upload_failed'
-	| 'rate_limited'
-	| 'server'
-	| 'unknown';
-
-export interface WidgetErrorOptions {
-	status?: number;
-	details?: unknown;
-	cause?: unknown;
-}
+import type { WidgetErrorCode, WidgetErrorOptions } from './types';
 
 export class WidgetError extends Error {
 	readonly code: WidgetErrorCode;

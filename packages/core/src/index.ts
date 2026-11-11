@@ -1,6 +1,7 @@
 export { createClient } from './client';
-export { WidgetError, type WidgetErrorCode } from './shared/errors';
-export { type CreateStorageOptions, createStorage } from './shared/storage';
+export { WidgetError } from './shared/errors';
+export { createStorage } from './shared/storage';
+export type { CreateStorageOptions, WidgetErrorCode } from './shared/types';
 export { countUnread } from './store/chat';
 export type * from './types/auth';
 export type * from './types/chat';

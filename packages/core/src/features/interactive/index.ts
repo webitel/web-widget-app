@@ -1,5 +1,5 @@
 import type { InteractiveApi } from '../../types/client';
-import type { FeatureContext } from '../context';
+import type { FeatureContext } from '../types';
 
 export function createInteractiveFeature({
 	api,

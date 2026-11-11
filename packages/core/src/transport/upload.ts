@@ -1,18 +1,6 @@
 import { statusError, WidgetError } from '../shared/errors';
 import { parseBody } from '../shared/parse-body';
-
-export interface UploadProgress {
-	loaded: number;
-	total: number | undefined;
-}
-
-export interface UploadRequest {
-	url: string;
-	body: FormData | Blob;
-	headers: Record<string, string>;
-	signal?: AbortSignal;
-	onProgress?: (progress: UploadProgress) => void;
-}
+import type { UploadRequest } from './types';
 
 export function upload({
 	url,

@@ -1,13 +1,8 @@
 import { upsertMessage } from '../../store/messages';
 import type { Message } from '../../types/message';
-import type { FeatureContext } from '../context';
+import type { FeatureContext, HistoryFeature } from '../types';
 
 const PAGE_SIZE = 50;
-
-export interface HistoryFeature {
-	loadLatest(): Promise<void>;
-	loadOlder(): Promise<void>;
-}
 
 export function createHistoryFeature(ctx: FeatureContext): HistoryFeature {
 	const { api, store } = ctx;

@@ -1,6 +1,5 @@
 import type { Message, MessageStatus } from '../types/message';
-
-export type MessageList = readonly Message[];
+import type { MessageEdit, MessageList } from './types';
 
 const statusRank: Record<Exclude<MessageStatus, 'failed'>, number> = {
 	sending: 0,
@@ -92,12 +91,6 @@ export function confirmMessage(
 			: message,
 	);
 	return setMessageStatus(withId, sendId, 'sent');
-}
-
-export interface MessageEdit {
-	text: string;
-	version: number;
-	editedAt: number | undefined;
 }
 
 export function editMessage(

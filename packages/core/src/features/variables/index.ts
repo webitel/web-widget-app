@@ -1,5 +1,5 @@
 import type { VariablesApi } from '../../types/client';
-import type { FeatureContext } from '../context';
+import type { FeatureContext } from '../types';
 
 export function createVariablesFeature(ctx: FeatureContext): VariablesApi {
 	const { api, session, store } = ctx;

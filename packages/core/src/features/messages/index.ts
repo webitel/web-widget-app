@@ -9,16 +9,10 @@ import {
 	setMessageStatus,
 	upsertMessage,
 } from '../../store/messages';
-import type { MessagesApi } from '../../types/client';
 import type { Message } from '../../types/message';
-import type { FeatureContext } from '../context';
+import type { FeatureContext, MessagesFeature } from '../types';
 import { subscribeMessageEvents } from './handlers';
 import { createOutgoingMessage, toReply } from './outgoing';
-
-export type MessagesFeature = Pick<
-	MessagesApi,
-	'send' | 'retry' | 'edit' | 'delete'
->;
 
 export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 	const { api, store, session } = ctx;

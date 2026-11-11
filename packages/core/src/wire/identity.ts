@@ -1,9 +1,5 @@
 import { field, readString } from './read';
-
-export interface Identity {
-	sub: string;
-	iss: string | undefined;
-}
+import type { Identity } from './types';
 
 export function contactOf(source: unknown, key: string): unknown {
 	return field(field(source, key), 'contact');

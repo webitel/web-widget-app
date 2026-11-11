@@ -1,18 +1,5 @@
-import type { Variables } from '../types/client';
 import { readList, readString } from '../wire/read';
-import type { ApiOptions } from '.';
-
-export interface LatestThread {
-	threadId: string | undefined;
-	updatesCursor: string | undefined;
-}
-
-export interface ThreadEndpoints {
-	latest(): Promise<LatestThread>;
-	markRead(threadId: string, seq: number): Promise<void>;
-	setVariables(threadId: string, variables: Variables): Promise<void>;
-	typing(threadId: string): Promise<void>;
-}
+import type { ApiOptions, ThreadEndpoints } from './types';
 
 export function createThreadsApi({
 	http,

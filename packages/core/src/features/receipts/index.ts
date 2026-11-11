@@ -1,11 +1,7 @@
 import { lastIncomingSeq, withHorizon, withMessages } from '../../store/chat';
 import { setMessageStatus } from '../../store/messages';
 import { isSameIdentity } from '../../wire/identity';
-import type { FeatureContext } from '../context';
-
-export interface ReceiptsFeature {
-	markRead(): void;
-}
+import type { FeatureContext, ReceiptsFeature } from '../types';
 
 export function createReceiptsFeature(ctx: FeatureContext): ReceiptsFeature {
 	const { store, session } = ctx;

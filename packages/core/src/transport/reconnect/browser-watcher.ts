@@ -1,13 +1,4 @@
-export interface BrowserWatcherHandlers {
-	onOffline: () => void;
-	onOnline: () => void;
-	onVisible: () => void;
-}
-
-export interface BrowserWatcher {
-	start(): void;
-	stop(): void;
-}
+import type { BrowserWatcher, BrowserWatcherHandlers } from './types';
 
 export function createBrowserWatcher({
 	onOffline,

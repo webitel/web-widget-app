@@ -6,12 +6,7 @@ import type {
 	MessageReply,
 	MessageType,
 } from '../types/message';
-import {
-	contactOf,
-	type Identity,
-	isSameIdentity,
-	readIdentity,
-} from './identity';
+import { contactOf, isSameIdentity, readIdentity } from './identity';
 import {
 	field,
 	readBoolean,
@@ -20,6 +15,7 @@ import {
 	readString,
 	readTime,
 } from './read';
+import type { Identity } from './types';
 
 const knownTypes: MessageType[] = [
 	'text',

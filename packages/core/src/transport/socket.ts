@@ -1,35 +1,13 @@
 import { WidgetError } from '../shared/errors';
 import type { ConnectionState } from '../types/client';
-import type { ServerEnvelope, ServerEvent } from '../wire/events';
 import { createBrowserWatcher } from './reconnect/browser-watcher';
 import {
 	createRetryScheduler,
 	DEFAULT_RETRY_POLICY,
 } from './reconnect/retry-scheduler';
+import type { DisconnectEvent, Socket, SocketOptions } from './types';
 
 const CONNECT_TIMEOUT = 10_000;
-
-export interface SocketOptions {
-	baseUrl: string;
-	getToken: () => Promise<string>;
-	decode: (data: unknown) => ServerEnvelope;
-	onEnvelope: (envelope: ServerEnvelope) => void;
-	onStateChange: (state: ConnectionState) => void;
-	onError: (error: WidgetError) => void;
-}
-
-export interface Socket {
-	connect(): Promise<void>;
-	disconnect(): void;
-	send(command: object): boolean;
-}
-
-type DisconnectEvent = Extract<
-	ServerEvent,
-	{
-		type: 'disconnected';
-	}
->;
 
 export function createSocket(options: SocketOptions): Socket {
 	const url = `${options.baseUrl.replace(/\/+$/, '').replace(/^http/, 'ws')}/ws/im`;

@@ -1,10 +1,10 @@
 import { createApi } from './api';
-import type { FeatureContext } from './features/context';
 import { createHistoryFeature } from './features/history';
 import { createInteractiveFeature } from './features/interactive';
 import { createMessagesFeature } from './features/messages';
 import { createReactionsFeature } from './features/reactions';
 import { createReceiptsFeature } from './features/receipts';
+import type { FeatureContext } from './features/types';
 import { createTypingFeature } from './features/typing';
 import { createVariablesFeature } from './features/variables';
 import { createSession } from './session';
@@ -23,7 +23,8 @@ import type {
 	ConnectionState,
 	WebWidgetClient,
 } from './types/client';
-import { decodeServerEnvelope, type ServerEvents } from './wire/events';
+import { decodeServerEnvelope } from './wire/events';
+import type { ServerEvents } from './wire/types';
 
 export function createClient(options: ClientOptions): WebWidgetClient {
 	const emitter = createEmitter<ClientEvents>();

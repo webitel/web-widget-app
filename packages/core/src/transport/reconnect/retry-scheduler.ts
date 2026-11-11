@@ -1,20 +1,9 @@
-export interface RetryPolicy {
-	initialDelay: number;
-	maxDelay: number;
-}
+import type { RetryPolicy, RetryScheduler } from './types';
 
 export const DEFAULT_RETRY_POLICY: RetryPolicy = {
 	initialDelay: 1_000,
 	maxDelay: 30_000,
 };
-
-export interface RetryScheduler {
-	readonly isPending: boolean;
-	schedule(): void;
-	runNow(): void;
-	cancel(): void;
-	restart(): void;
-}
 
 export function createRetryScheduler(
 	policy: RetryPolicy,

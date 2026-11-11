@@ -1,9 +1,4 @@
-type Handler<T> = (payload: T) => void;
-
-export interface Emitter<Events extends Record<string, unknown>> {
-	on<K extends keyof Events>(event: K, handler: Handler<Events[K]>): () => void;
-	emit<K extends keyof Events>(event: K, payload: Events[K]): void;
-}
+import type { Emitter, Handler } from './types';
 
 export function createEmitter<
 	Events extends Record<string, unknown>,

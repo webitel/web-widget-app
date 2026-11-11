@@ -1,10 +1,6 @@
-import { type Identity, readIdentity } from '../wire/identity';
+import { readIdentity } from '../wire/identity';
 import { field } from '../wire/read';
-import type { ApiOptions } from '.';
-
-export interface AuthEndpoints {
-	me(): Promise<Identity | undefined>;
-}
+import type { ApiOptions, AuthEndpoints } from './types';
 
 export function createAuthApi({ http }: ApiOptions): AuthEndpoints {
 	return {

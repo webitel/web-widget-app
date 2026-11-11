@@ -1,8 +1,4 @@
-export interface Store<State> {
-	getSnapshot(): State;
-	setState(update: (state: State) => State): void;
-	subscribe(listener: () => void): () => void;
-}
+import type { Store } from './types';
 
 export function createStore<State>(initial: State): Store<State> {
 	let state = initial;

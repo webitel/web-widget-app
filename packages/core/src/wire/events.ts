@@ -1,71 +1,7 @@
-import type { Message, MessageReaction } from '../types/message';
-import { contactOf, type Identity, readIdentity } from './identity';
+import { contactOf, readIdentity } from './identity';
 import { decodeMessage, decodeReactions } from './message';
 import { field, readList, readNumber, readString, readTime } from './read';
-
-export type ServerEvent =
-	| {
-			type: 'connected';
-			updatesCursor: string | undefined;
-	  }
-	| {
-			type: 'disconnected';
-			code: number | undefined;
-			status: string | undefined;
-	  }
-	| {
-			type: 'resync';
-			cursor: string | undefined;
-	  }
-	| {
-			type: 'message';
-			eventId: string | undefined;
-			message: Message;
-	  }
-	| {
-			type: 'message_edited';
-			id: string | undefined;
-			text: string;
-			version: number;
-			editedAt: number | undefined;
-	  }
-	| {
-			type: 'message_deleted';
-			id: string | undefined;
-			deletedAt: number | undefined;
-	  }
-	| {
-			type: 'message_status';
-			status: string | undefined;
-			member: Identity | undefined;
-			messageId: string | undefined;
-			upToSeq: number | undefined;
-	  }
-	| {
-			type: 'reaction';
-			messageId: string | undefined;
-			reactions: MessageReaction[];
-	  }
-	| {
-			type: 'typing';
-			from: Identity | undefined;
-			name: string | undefined;
-			timeoutMs: number;
-	  }
-	| {
-			type: 'unknown';
-			name: string;
-			payload: unknown;
-	  };
-
-export type ServerEvents = {
-	[E in ServerEvent as E['type']]: E;
-};
-
-export interface ServerEnvelope {
-	updatesCursor: string | undefined;
-	event: ServerEvent;
-}
+import type { Identity, ServerEnvelope, ServerEvent } from './types';
 
 export function decodeServerEnvelope(
 	data: unknown,

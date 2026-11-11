@@ -1,4 +1,3 @@
-import type { Message } from '../types/message';
 import { contactOf, isSameIdentity, readIdentity } from '../wire/identity';
 import { decodeMessages } from '../wire/message';
 import {
@@ -8,33 +7,7 @@ import {
 	readString,
 	readTime,
 } from '../wire/read';
-import type { ApiOptions } from '.';
-
-export interface ReadState {
-	isSelf: boolean;
-	deliveredUpToSeq: number | undefined;
-	readUpToSeq: number | undefined;
-}
-
-export interface ThreadUpdates {
-	threadId: string | undefined;
-	messages: Message[];
-	deleted: {
-		id: string;
-		deletedAt: number | undefined;
-	}[];
-	readStates: ReadState[];
-}
-
-export interface Updates {
-	resync: boolean;
-	cursor: string | undefined;
-	threads: ThreadUpdates[];
-}
-
-export interface UpdateEndpoints {
-	get(cursor: string | undefined): Promise<Updates>;
-}
+import type { ApiOptions, ThreadUpdates, UpdateEndpoints } from './types';
 
 export function createUpdatesApi({
 	http,
