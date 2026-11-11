@@ -1,5 +1,5 @@
 import { createApi } from './api';
-import type { FeatureContext, Session } from './features/context';
+import type { FeatureContext } from './features/context';
 import { createHistoryFeature } from './features/history';
 import { createInteractiveFeature } from './features/interactive';
 import { createMessagesFeature } from './features/messages';
@@ -7,6 +7,7 @@ import { createReactionsFeature } from './features/reactions';
 import { createReceiptsFeature } from './features/receipts';
 import { createTypingFeature } from './features/typing';
 import { createVariablesFeature } from './features/variables';
+import { createSession } from './session';
 import { createEmitter } from './shared/emitter';
 import { toWidgetError } from './shared/errors';
 import { createStorage } from './shared/storage';
@@ -30,10 +31,7 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 	const storage = options.storage ?? createStorage();
 	const cursor = createCursor(storage);
 	const store = createStore(initialChatState);
-	const session: Session = {
-		self: undefined,
-		variables: {},
-	};
+	const session = createSession(() => api.auth.me());
 	let connectionState: ConnectionState = 'idle';
 
 	const setConnectionState = (next: ConnectionState) => {
@@ -60,13 +58,15 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 		onError: (error) => emitter.emit('error', error),
 	});
 
+	const api = createApi({
+		http: createHttpClient(options),
+		socket,
+		session,
+		channelId: options.channelId,
+	});
+
 	const ctx: FeatureContext = {
-		api: createApi({
-			http: createHttpClient(options),
-			socket,
-			session,
-			channelId: options.channelId,
-		}),
+		api,
 		store,
 		events,
 		emitter,
@@ -106,8 +106,7 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 			socket.disconnect();
 			storage.clear();
 			sync.reset();
-			session.self = undefined;
-			session.variables = {};
+			session.reset();
 			store.setState(() => initialChatState);
 			setConnectionState('idle');
 			emitter.emit('reset', undefined);

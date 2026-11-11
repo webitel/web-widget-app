@@ -9,10 +9,7 @@ export function createVariablesFeature(ctx: FeatureContext): VariablesApi {
 			...session.variables,
 		}),
 		async set(variables) {
-			session.variables = {
-				...session.variables,
-				...variables,
-			};
+			session.addVariables(variables);
 
 			const { threadId } = store.getSnapshot();
 			if (threadId) await api.threads.setVariables(threadId, variables);

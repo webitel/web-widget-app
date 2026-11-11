@@ -1,4 +1,4 @@
-import type { Session } from '../features/context';
+import type { Session } from '../session';
 import type { HttpClient } from '../transport/http';
 import type { Socket } from '../transport/socket';
 import { type AuthEndpoints, createAuthApi } from './auth';

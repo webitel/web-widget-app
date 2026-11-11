@@ -17,13 +17,9 @@ export function createSync(
 	let loading: Promise<void> | undefined;
 	let ready = false;
 
-	const identify = async () => {
-		session.self = await api.auth.me();
-	};
-
 	const load = () => {
 		loading ??= (async () => {
-			await identify();
+			await session.identify();
 			await history.loadLatest();
 			ready = true;
 		})().catch((error: unknown) => {
