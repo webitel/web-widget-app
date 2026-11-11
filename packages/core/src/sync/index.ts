@@ -85,22 +85,21 @@ export function createSync(
 		}
 	};
 
-	const catchUp = async () => {
+	const catchUp = async (from = cursor.get()) => {
 		const response = await http.request({
 			method: 'POST',
 			path: 'v1/updates',
 			body: {
-				cursor: cursor.get(),
+				cursor: from,
 			},
 		});
 
 		if (readBoolean(response, 'resync')) {
 			await history.loadLatest();
-			return;
-		}
-
-		for (const thread of readList(response, 'threads')) {
-			applyThreadUpdates(thread);
+		} else {
+			for (const thread of readList(response, 'threads')) {
+				applyThreadUpdates(thread);
+			}
 		}
 		cursor.save(readString(response, 'cursor'));
 	};
@@ -112,7 +111,9 @@ export function createSync(
 				catchUp().catch(report);
 			}
 		}
-		if (event.type === 'resync' && ready) catchUp().catch(report);
+		if (event.type === 'resync' && ready) {
+			catchUp(event.cursor ?? cursor.get()).catch(report);
+		}
 	});
 
 	return {
