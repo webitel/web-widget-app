@@ -1,4 +1,3 @@
-import { toWidgetError } from '../../shared/errors';
 import { lastIncomingSeq, withHorizon, withMessages } from '../../store/chat';
 import { setMessageStatus } from '../../store/messages';
 import { isSameIdentity } from '../../wire/identity';
@@ -11,10 +10,7 @@ export interface ReceiptsFeature {
 export function createReceiptsFeature(ctx: FeatureContext): ReceiptsFeature {
 	const { store, session } = ctx;
 
-	ctx.events.on('envelope', ({ event }) => {
-		if (event.type !== 'message_status') return;
-		const { status, messageId, upToSeq, member } = event;
-
+	ctx.events.on('message_status', ({ status, messageId, upToSeq, member }) => {
 		if (status === 'failed' && messageId) {
 			store.setState(
 				withMessages((list) => setMessageStatus(list, messageId, 'failed')),
@@ -37,9 +33,7 @@ export function createReceiptsFeature(ctx: FeatureContext): ReceiptsFeature {
 
 			store.setState(withHorizon(true, 'read', seq));
 
-			ctx.api.threads.markRead(threadId, seq).catch((error: unknown) => {
-				ctx.emitter.emit('error', toWidgetError(error));
-			});
+			ctx.api.threads.markRead(threadId, seq).catch(ctx.report);
 		},
 	};
 }

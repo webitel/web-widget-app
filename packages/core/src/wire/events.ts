@@ -1,6 +1,6 @@
-import type { MessageReaction } from '../types/message';
+import type { Message, MessageReaction } from '../types/message';
 import { contactOf, type Identity, readIdentity } from './identity';
-import { decodeReactions } from './message';
+import { decodeMessage, decodeReactions } from './message';
 import { field, readList, readNumber, readString, readTime } from './read';
 
 export type ServerEvent =
@@ -19,7 +19,8 @@ export type ServerEvent =
 	  }
 	| {
 			type: 'message';
-			message: unknown;
+			eventId: string | undefined;
+			message: Message;
 	  }
 	| {
 			type: 'message_edited';
@@ -57,13 +58,19 @@ export type ServerEvent =
 			payload: unknown;
 	  };
 
+export type ServerEvents = {
+	[E in ServerEvent as E['type']]: E;
+};
+
 export interface ServerEnvelope {
-	id: string | undefined;
 	updatesCursor: string | undefined;
 	event: ServerEvent;
 }
 
-export function decodeServerEnvelope(data: unknown): ServerEnvelope {
+export function decodeServerEnvelope(
+	data: unknown,
+	self: Identity | undefined,
+): ServerEnvelope {
 	const envelope = parseJson(data);
 	const payload = field(envelope, 'payload');
 	const [name = 'invalid', body] =
@@ -72,16 +79,20 @@ export function decodeServerEnvelope(data: unknown): ServerEnvelope {
 			: [];
 
 	return {
-		id: readString(envelope, 'id'),
 		updatesCursor:
 			name === 'connected_event'
 				? undefined
 				: readString(body, 'updates_cursor'),
-		event: decodeEvent(name, body),
+		event: decodeEvent(name, body, readString(envelope, 'id'), self),
 	};
 }
 
-function decodeEvent(name: string, body: unknown): ServerEvent {
+function decodeEvent(
+	name: string,
+	body: unknown,
+	eventId: string | undefined,
+	self: Identity | undefined,
+): ServerEvent {
 	switch (name) {
 		case 'connected_event':
 			return {
@@ -99,11 +110,15 @@ function decodeEvent(name: string, body: unknown): ServerEvent {
 				type: 'resync',
 				cursor: readString(body, 'cursor'),
 			};
-		case 'message_event':
+		case 'message_event': {
+			const message = decodeMessage(body, self);
+			if (!message) break;
 			return {
 				type: 'message',
-				message: body,
+				eventId,
+				message,
 			};
+		}
 		case 'message_edited_event':
 			return {
 				type: 'message_edited',
@@ -139,13 +154,12 @@ function decodeEvent(name: string, body: unknown): ServerEvent {
 				name: readString(contactOf(body, 'from'), 'name'),
 				timeoutMs: readNumber(body, 'timeout_ms') ?? 0,
 			};
-		default:
-			return {
-				type: 'unknown',
-				name,
-				payload: body,
-			};
 	}
+	return {
+		type: 'unknown',
+		name,
+		payload: body,
+	};
 }
 
 function parseJson(data: unknown): unknown {

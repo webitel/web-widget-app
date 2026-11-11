@@ -1,10 +1,6 @@
 import { WidgetError } from '../shared/errors';
 import type { ConnectionState } from '../types/client';
-import {
-	decodeServerEnvelope,
-	type ServerEnvelope,
-	type ServerEvent,
-} from '../wire/events';
+import type { ServerEnvelope, ServerEvent } from '../wire/events';
 import { createBrowserWatcher } from './reconnect/browser-watcher';
 import {
 	createRetryScheduler,
@@ -16,6 +12,7 @@ const CONNECT_TIMEOUT = 10_000;
 export interface SocketOptions {
 	baseUrl: string;
 	getToken: () => Promise<string>;
+	decode: (data: unknown) => ServerEnvelope;
 	onEnvelope: (envelope: ServerEnvelope) => void;
 	onStateChange: (state: ConnectionState) => void;
 	onError: (error: WidgetError) => void;
@@ -120,7 +117,7 @@ export function createSocket(options: SocketOptions): Socket {
 	};
 
 	const receive = (data: unknown) => {
-		const envelope = decodeServerEnvelope(data);
+		const envelope = options.decode(data);
 		const { event } = envelope;
 
 		if (event.type === 'connected') {

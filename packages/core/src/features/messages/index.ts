@@ -11,7 +11,6 @@ import {
 } from '../../store/messages';
 import type { MessagesApi } from '../../types/client';
 import type { Message, MessageReply } from '../../types/message';
-import { decodeMessage } from '../../wire/message';
 import type { FeatureContext } from '../context';
 
 export type MessagesFeature = Pick<
@@ -48,40 +47,29 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 		}
 	};
 
-	ctx.events.on('envelope', ({ id, event }) => {
-		switch (event.type) {
-			case 'message': {
-				const message = decodeMessage(event.message, session.self);
-				if (!message) return;
-				store.setState(withThread(message.threadId));
-				store.setState(withMessages((list) => upsertMessage(list, message)));
-				if (message.author !== 'client' && id) api.messages.ack(id);
-				ctx.emitter.emit('message', message);
-				return;
-			}
-			case 'message_edited': {
-				const { id: messageId, text, version, editedAt } = event;
-				if (!messageId) return;
-				store.setState(
-					withMessages((list) =>
-						editMessage(list, messageId, {
-							text,
-							version,
-							editedAt,
-						}),
-					),
-				);
-				return;
-			}
-			case 'message_deleted': {
-				const { id: messageId, deletedAt } = event;
-				if (!messageId) return;
-				store.setState(
-					withMessages((list) => deleteMessage(list, messageId, deletedAt)),
-				);
-				return;
-			}
-		}
+	ctx.events.on('message', ({ eventId, message }) => {
+		store.setState(withThread(message.threadId));
+		store.setState(withMessages((list) => upsertMessage(list, message)));
+		if (message.author !== 'client' && eventId) api.messages.ack(eventId);
+		ctx.emitter.emit('message', message);
+	});
+
+	ctx.events.on('message_edited', ({ id, text, version, editedAt }) => {
+		if (!id) return;
+		store.setState(
+			withMessages((list) =>
+				editMessage(list, id, {
+					text,
+					version,
+					editedAt,
+				}),
+			),
+		);
+	});
+
+	ctx.events.on('message_deleted', ({ id, deletedAt }) => {
+		if (!id) return;
+		store.setState(withMessages((list) => deleteMessage(list, id, deletedAt)));
 	});
 
 	return {

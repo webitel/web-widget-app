@@ -1,7 +1,6 @@
 import type { ThreadUpdates } from '../api/updates';
 import type { FeatureContext } from '../features/context';
 import type { HistoryFeature } from '../features/history';
-import { toWidgetError } from '../shared/errors';
 import { withHorizon, withMessages, withThread } from '../store/chat';
 import { deleteMessage, upsertMessage } from '../store/messages';
 
@@ -14,13 +13,9 @@ export function createSync(
 	ctx: FeatureContext,
 	history: Pick<HistoryFeature, 'loadLatest'>,
 ): Sync {
-	const { api, store, session, cursor } = ctx;
+	const { api, store, session, cursor, report } = ctx;
 	let loading: Promise<void> | undefined;
 	let ready = false;
-
-	const report = (error: unknown) => {
-		ctx.emitter.emit('error', toWidgetError(error));
-	};
 
 	const identify = async () => {
 		session.self = await api.auth.me();
@@ -75,16 +70,13 @@ export function createSync(
 		cursor.save(updates.cursor);
 	};
 
-	ctx.events.on('envelope', ({ event }) => {
-		if (event.type === 'connected') {
-			if (!loading) load().catch(report);
-			else if (ready && event.updatesCursor !== cursor.get()) {
-				catchUp().catch(report);
-			}
-		}
-		if (event.type === 'resync' && ready) {
-			catchUp(event.cursor ?? cursor.get()).catch(report);
-		}
+	ctx.events.on('connected', ({ updatesCursor }) => {
+		if (!loading) load().catch(report);
+		else if (ready && updatesCursor !== cursor.get()) catchUp().catch(report);
+	});
+
+	ctx.events.on('resync', (event) => {
+		if (ready) catchUp(event.cursor ?? cursor.get()).catch(report);
 	});
 
 	return {

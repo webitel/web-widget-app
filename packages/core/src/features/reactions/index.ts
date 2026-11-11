@@ -6,9 +6,8 @@ import type { FeatureContext } from '../context';
 export function createReactionsFeature(ctx: FeatureContext): ReactionsApi {
 	const { api, store } = ctx;
 
-	ctx.events.on('envelope', ({ event }) => {
-		if (event.type !== 'reaction' || !event.messageId) return;
-		const { messageId, reactions } = event;
+	ctx.events.on('reaction', ({ messageId, reactions }) => {
+		if (!messageId) return;
 		store.setState(
 			withMessages((list) =>
 				updateMessage(list, messageId, (message) => ({

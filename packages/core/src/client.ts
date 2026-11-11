@@ -8,6 +8,7 @@ import { createReceiptsFeature } from './features/receipts';
 import { createTypingFeature } from './features/typing';
 import { createVariablesFeature } from './features/variables';
 import { createEmitter } from './shared/emitter';
+import { toWidgetError } from './shared/errors';
 import { createStorage } from './shared/storage';
 import { initialChatState } from './store/chat';
 import { createStore } from './store/create-store';
@@ -21,13 +22,11 @@ import type {
 	ConnectionState,
 	WebWidgetClient,
 } from './types/client';
-import type { ServerEnvelope } from './wire/events';
+import { decodeServerEnvelope, type ServerEvents } from './wire/events';
 
 export function createClient(options: ClientOptions): WebWidgetClient {
 	const emitter = createEmitter<ClientEvents>();
-	const events = createEmitter<{
-		envelope: ServerEnvelope;
-	}>();
+	const events = createEmitter<ServerEvents>();
 	const storage = options.storage ?? createStorage();
 	const cursor = createCursor(storage);
 	const store = createStore(initialChatState);
@@ -46,10 +45,10 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 	const socket = createSocket({
 		baseUrl: options.baseUrl,
 		getToken: () => options.auth.getToken(),
-		onEnvelope(envelope) {
-			cursor.save(envelope.updatesCursor);
-			events.emit('envelope', envelope);
-			const { event } = envelope;
+		decode: (data) => decodeServerEnvelope(data, session.self),
+		onEnvelope({ updatesCursor, event }) {
+			cursor.save(updatesCursor);
+			events.emit(event.type, event);
 			if (event.type === 'unknown') {
 				emitter.emit('unknown', {
 					name: event.name,
@@ -71,6 +70,7 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 		store,
 		events,
 		emitter,
+		report: (error) => emitter.emit('error', toWidgetError(error)),
 		cursor,
 		session,
 	};

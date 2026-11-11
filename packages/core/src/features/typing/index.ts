@@ -8,13 +8,11 @@ export function createTypingFeature(ctx: FeatureContext): TypingApi {
 	const { api, store, session } = ctx;
 	let lastSentAt = 0;
 
-	ctx.events.on('envelope', ({ event }) => {
-		if (event.type !== 'typing' || isSameIdentity(event.from, session.self)) {
-			return;
-		}
+	ctx.events.on('typing', ({ from, name, timeoutMs }) => {
+		if (isSameIdentity(from, session.self)) return;
 		ctx.emitter.emit('typing', {
-			name: event.name,
-			timeoutMs: event.timeoutMs,
+			name,
+			timeoutMs,
 		});
 	});
 
