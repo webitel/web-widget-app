@@ -10,8 +10,10 @@ import {
 	upsertMessage,
 } from '../../store/messages';
 import type { MessagesApi } from '../../types/client';
-import type { Message, MessageReply } from '../../types/message';
+import type { Message } from '../../types/message';
 import type { FeatureContext } from '../context';
+import { subscribeMessageEvents } from './handlers';
+import { createOutgoingMessage, toReply } from './outgoing';
 
 export type MessagesFeature = Pick<
 	MessagesApi,
@@ -47,30 +49,7 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 		}
 	};
 
-	ctx.events.on('message', ({ eventId, message }) => {
-		store.setState(withThread(message.threadId));
-		store.setState(withMessages((list) => upsertMessage(list, message)));
-		if (message.author !== 'client' && eventId) api.messages.ack(eventId);
-		ctx.emitter.emit('message', message);
-	});
-
-	ctx.events.on('message_edited', ({ id, text, version, editedAt }) => {
-		if (!id) return;
-		store.setState(
-			withMessages((list) =>
-				editMessage(list, id, {
-					text,
-					version,
-					editedAt,
-				}),
-			),
-		);
-	});
-
-	ctx.events.on('message_deleted', ({ id, deletedAt }) => {
-		if (!id) return;
-		store.setState(withMessages((list) => deleteMessage(list, id, deletedAt)));
-	});
+	subscribeMessageEvents(ctx);
 
 	return {
 		async send(text, options = {}) {
@@ -119,43 +98,5 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 				withMessages((list) => deleteMessage(list, id, deletedAt)),
 			);
 		},
-	};
-}
-
-function toReply(message: Message | undefined): MessageReply | undefined {
-	if (!message) return undefined;
-	return {
-		id: message.id,
-		text: message.text,
-		senderName: message.senderName,
-		deleted: message.deletedAt !== undefined,
-	};
-}
-
-function createOutgoingMessage(
-	text: string,
-	threadId: string | undefined,
-	replyTo: MessageReply | undefined,
-): Message {
-	const sendId = crypto.randomUUID();
-	return {
-		id: sendId,
-		sendId,
-		threadId,
-		seq: undefined,
-		type: 'text',
-		author: 'client',
-		senderName: undefined,
-		text,
-		images: [],
-		files: [],
-		replyTo,
-		createdAt: Date.now(),
-		editedAt: undefined,
-		deletedAt: undefined,
-		version: 0,
-		status: 'sending',
-		reactions: [],
-		raw: undefined,
 	};
 }
