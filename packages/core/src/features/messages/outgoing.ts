@@ -1,3 +1,4 @@
+import type { OutgoingContent } from '../../api/types';
 import type { Message, MessageReply } from '../../types/message';
 
 export function toReply(
@@ -13,7 +14,7 @@ export function toReply(
 }
 
 export function createOutgoingMessage(
-	text: string,
+	content: OutgoingContent,
 	threadId: string | undefined,
 	replyTo: MessageReply | undefined,
 ): Message {
@@ -23,12 +24,14 @@ export function createOutgoingMessage(
 		sendId,
 		threadId,
 		seq: undefined,
-		type: 'text',
+		type: content.type,
 		author: 'client',
 		senderName: undefined,
-		text,
+		text: content.type === 'text' ? content.text : '',
 		images: [],
 		files: [],
+		location: content.type === 'location' ? content.location : undefined,
+		contact: content.type === 'contact' ? content.contact : undefined,
 		replyTo,
 		createdAt: Date.now(),
 		editedAt: undefined,
@@ -37,5 +40,24 @@ export function createOutgoingMessage(
 		status: 'sending',
 		reactions: [],
 		raw: undefined,
+	};
+}
+
+export function toContent(message: Message): OutgoingContent {
+	if (message.location) {
+		return {
+			type: 'location',
+			location: message.location,
+		};
+	}
+	if (message.contact) {
+		return {
+			type: 'contact',
+			contact: message.contact,
+		};
+	}
+	return {
+		type: 'text',
+		text: message.text,
 	};
 }

@@ -123,6 +123,8 @@ export function deleteMessage(
 		text: '',
 		images: [],
 		files: [],
+		location: undefined,
+		contact: undefined,
 		deletedAt: deletedAt ?? Date.now(),
 	}));
 }

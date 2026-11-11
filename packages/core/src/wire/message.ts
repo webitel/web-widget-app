@@ -1,10 +1,14 @@
 import type {
 	Message,
 	MessageAuthor,
+	MessageContact,
 	MessageFile,
+	MessageLocation,
 	MessageReaction,
 	MessageReply,
+	MessageRevision,
 	MessageType,
+	RevisionAction,
 } from '../types/message';
 import { contactOf, isSameIdentity, readIdentity } from './identity';
 import {
@@ -49,6 +53,8 @@ export function decodeMessage(
 		text: readString(source, 'body') ?? '',
 		images: readList(source, 'images').map(decodeFile),
 		files: readList(source, 'documents').map(decodeFile),
+		location: decodeLocation(field(source, 'location')),
+		contact: decodeContact(field(source, 'contact')),
 		replyTo: decodeReply(field(source, 'reply_to')),
 		createdAt,
 		editedAt: readTime(source, 'edited_at'),
@@ -79,6 +85,48 @@ export function decodeReactions(list: unknown[]): MessageReaction[] {
 			reactedByMe: readBoolean(item, 'reacted_by_me'),
 		};
 	});
+}
+
+export function decodeRevision(source: unknown): MessageRevision {
+	return {
+		version: readNumber(source, 'version') ?? 0,
+		action: decodeRevisionAction(readString(source, 'action')),
+		text: readString(source, 'body') ?? '',
+		changedAt: readTime(source, 'changed_at'),
+		changedBy: readString(contactOf(source, 'changed_by'), 'name'),
+	};
+}
+
+const revisionActions: RevisionAction[] = [
+	'created',
+	'edited',
+	'deleted',
+];
+
+function decodeRevisionAction(value: string | undefined): RevisionAction {
+	const action = value?.replace('MESSAGE_REVISION_ACTION_', '').toLowerCase();
+	return revisionActions.find((known) => known === action) ?? 'unknown';
+}
+
+function decodeLocation(source: unknown): MessageLocation | undefined {
+	const latitude = readNumber(source, 'latitude');
+	const longitude = readNumber(source, 'longitude');
+	if (latitude === undefined || longitude === undefined) return undefined;
+	return {
+		latitude,
+		longitude,
+		name: readString(source, 'name'),
+		address: readString(source, 'address'),
+	};
+}
+
+function decodeContact(source: unknown): MessageContact | undefined {
+	if (!source) return undefined;
+	return {
+		name: readString(source, 'name'),
+		phone: readString(source, 'phone'),
+		email: readString(source, 'email'),
+	};
 }
 
 function decodeType(source: unknown): MessageType {

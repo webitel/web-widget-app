@@ -23,7 +23,12 @@ const template = `
 	<button id="older" hidden>Load older</button>
 	<ul></ul>
 	<div id="reply" hidden></div>
-	<form><input placeholder="Message" /><button>Send</button></form>
+	<form>
+		<input placeholder="Message" />
+		<button>Send</button>
+		<button type="button" id="location">📍</button>
+		<button type="button" id="contact">👤</button>
+	</form>
 `;
 
 export class WebitelChatElement extends HTMLElement {
@@ -66,6 +71,12 @@ export class WebitelChatElement extends HTMLElement {
 			root
 				.querySelector('input')
 				?.addEventListener('input', () => this.#client?.typing.notify());
+			root
+				.querySelector('#location')
+				?.addEventListener('click', () => this.#sendLocation());
+			root
+				.querySelector('#contact')
+				?.addEventListener('click', () => this.#sendContact());
 			root.querySelector('#reply')?.addEventListener('click', () => {
 				this.#replyTo = undefined;
 				this.#render();
@@ -95,6 +106,46 @@ export class WebitelChatElement extends HTMLElement {
 		input.value = '';
 		this.#replyTo = undefined;
 		this.#render();
+	}
+
+	#sendLocation() {
+		navigator.geolocation.getCurrentPosition(({ coords }) => {
+			this.#client?.messages
+				.sendLocation(
+					{
+						latitude: coords.latitude,
+						longitude: coords.longitude,
+					},
+					{
+						replyTo: this.#takeReply(),
+					},
+				)
+				.catch(() => {});
+		});
+	}
+
+	#sendContact() {
+		const name = prompt('Name');
+		const phone = prompt('Phone');
+		if (!name && !phone) return;
+		this.#client?.messages
+			.sendContact(
+				{
+					name: name ?? undefined,
+					phone: phone ?? undefined,
+				},
+				{
+					replyTo: this.#takeReply(),
+				},
+			)
+			.catch(() => {});
+	}
+
+	#takeReply() {
+		const id = this.#replyTo?.id;
+		this.#replyTo = undefined;
+		this.#render();
+		return id;
 	}
 
 	#showTyping(name: string | undefined, timeoutMs: number) {
@@ -147,7 +198,7 @@ export class WebitelChatElement extends HTMLElement {
 			item.append(quote);
 		}
 
-		item.append(message.deletedAt ? '(deleted)' : message.text);
+		item.append(message.deletedAt ? '(deleted)' : describe(message));
 
 		const meta = document.createElement('small');
 		const edited = message.editedAt ? ' · edited' : '';
@@ -195,17 +246,50 @@ export class WebitelChatElement extends HTMLElement {
 					: client.reactions.set(message.id, '👍'),
 			),
 		];
-		if (message.author === 'client') {
+		if (message.editedAt) {
+			actions.push(
+				action('History', async () => {
+					const revisions = await client.messages.revisions(message.id);
+					alert(
+						revisions
+							.map(
+								({ version, action, text }) => `${version}. ${action}: ${text}`,
+							)
+							.join('\n'),
+					);
+				}),
+			);
+		}
+		if (message.author === 'client' && message.type === 'text') {
 			actions.push(
 				action('Edit', () => {
 					const text = prompt('Edit message', message.text);
 					return text ? client.messages.edit(message.id, text) : undefined;
 				}),
-				action('Delete', () => client.messages.delete(message.id)),
 			);
+		}
+		if (message.author === 'client') {
+			actions.push(action('Delete', () => client.messages.delete(message.id)));
 		}
 		return actions;
 	}
+}
+
+function describe(message: Message): string {
+	const { location, contact } = message;
+	if (location) {
+		return `📍 ${location.name ?? `${location.latitude}, ${location.longitude}`}`;
+	}
+	if (contact) {
+		return `👤 ${[
+			contact.name,
+			contact.phone,
+			contact.email,
+		]
+			.filter(Boolean)
+			.join(' · ')}`;
+	}
+	return message.text;
 }
 
 export function defineWebitelChat(tagName: string = WEBITEL_CHAT_TAG): void {

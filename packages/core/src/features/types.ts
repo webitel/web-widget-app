@@ -19,7 +19,13 @@ export interface FeatureContext {
 
 export type MessagesFeature = Pick<
 	MessagesApi,
-	'send' | 'retry' | 'edit' | 'delete'
+	| 'send'
+	| 'sendLocation'
+	| 'sendContact'
+	| 'retry'
+	| 'edit'
+	| 'delete'
+	| 'revisions'
 >;
 
 export interface HistoryFeature {

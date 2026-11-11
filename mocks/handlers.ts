@@ -30,6 +30,23 @@ interface SendTextBody {
 	reply_to_message_id?: string;
 }
 
+interface LocationBody {
+	latitude: number;
+	longitude: number;
+	name?: string;
+	address?: string;
+	send_id?: string;
+	reply_to_message_id?: string;
+}
+
+interface ContactBody {
+	name?: string;
+	phone_number?: string;
+	email?: string;
+	send_id?: string;
+	reply_to_message_id?: string;
+}
+
 interface EditBody {
 	body: string;
 }
@@ -50,14 +67,31 @@ interface UpdatesBody {
 	cursor?: string;
 }
 
-interface MockMessage {
+interface MockRevision {
+	version: number;
+	action: string;
+	body: string;
+	changed_at: string;
+	changed_by: Peer;
+}
+
+interface MockContent {
+	type: 'text' | 'location' | 'contact';
+	body: string;
+	location?: Omit<LocationBody, 'send_id' | 'reply_to_message_id'>;
+	contact?: {
+		name?: string | undefined;
+		phone?: string | undefined;
+		email?: string | undefined;
+	};
+}
+
+interface MockMessage extends MockContent {
 	id: string;
 	send_id: string | undefined;
 	thread_id: string;
 	seq: number;
 	created_at: number;
-	type: 'text';
-	body: string;
 	sender: Peer;
 	version: number;
 	edited_at?: number;
@@ -69,6 +103,7 @@ interface MockMessage {
 				sender: Peer;
 		  }
 		| undefined;
+	revisions: MockRevision[];
 }
 
 const messages: Array<{
@@ -93,9 +128,19 @@ const broadcast = (payload: object) => im.broadcast(envelope(payload));
 const findMessage = (id: string) =>
 	messages.find((item) => item.message.id === id)?.message;
 
+const revise = (message: MockMessage, action: string, by: Peer) => {
+	message.revisions.push({
+		version: message.revisions.length + 1,
+		action: `MESSAGE_REVISION_ACTION_${action}`,
+		body: message.body,
+		changed_at: String(Date.now()),
+		changed_by: by,
+	});
+};
+
 const addMessage = (
 	sender: Peer,
-	body: string,
+	content: MockContent | string,
 	sendId?: string,
 	replyToId?: string,
 ) => {
@@ -108,8 +153,12 @@ const addMessage = (
 		thread_id: THREAD_ID,
 		seq,
 		created_at: Date.now(),
-		type: 'text',
-		body,
+		...(typeof content === 'string'
+			? {
+					type: 'text',
+					body: content,
+				}
+			: content),
 		sender,
 		version: 1,
 		reply_to: quoted && {
@@ -117,7 +166,9 @@ const addMessage = (
 			body: quoted.body,
 			sender: quoted.sender,
 		},
+		revisions: [],
 	};
+	revise(message, 'CREATED', sender);
 	messages.push({
 		cursor,
 		message,
@@ -151,7 +202,27 @@ const replyTo = (message: MockMessage) => {
 			},
 		});
 	}, 800);
-	setTimeout(() => addMessage(operator, `Echo: ${message.body}`), 2000);
+	setTimeout(
+		() => addMessage(operator, `Echo: ${message.body || message.type}`),
+		2000,
+	);
+};
+
+const sent = async (
+	content: MockContent | string,
+	sendId: string | undefined,
+	replyToId: string | undefined,
+) => {
+	await delay(150);
+	threadExists = true;
+	const message = addMessage(client, content, sendId, replyToId);
+	replyTo(message);
+	return HttpResponse.json({
+		id: message.id,
+		to: {
+			thread_id: THREAD_ID,
+		},
+	});
 };
 
 export function operatorSays(text: string): void {
@@ -219,17 +290,54 @@ export const handlers = [
 		`${MOCK_BASE_URL}/v1/messages/text`,
 		async ({ request }) => {
 			const { body, send_id, reply_to_message_id } = await request.json();
-			await delay(150);
-			threadExists = true;
-			const message = addMessage(client, body, send_id, reply_to_message_id);
-			replyTo(message);
-			return HttpResponse.json({
-				id: message.id,
-				to: {
-					thread_id: THREAD_ID,
-				},
-			});
+			return sent(body, send_id, reply_to_message_id);
 		},
+	),
+
+	http.post<never, LocationBody>(
+		`${MOCK_BASE_URL}/v1/messages/location`,
+		async ({ request }) => {
+			const { send_id, reply_to_message_id, ...location } =
+				await request.json();
+			return sent(
+				{
+					type: 'location',
+					body: '',
+					location,
+				},
+				send_id,
+				reply_to_message_id,
+			);
+		},
+	),
+
+	http.post<never, ContactBody>(
+		`${MOCK_BASE_URL}/v1/messages/contact`,
+		async ({ request }) => {
+			const { send_id, reply_to_message_id, name, phone_number, email } =
+				await request.json();
+			return sent(
+				{
+					type: 'contact',
+					body: '',
+					contact: {
+						name,
+						phone: phone_number,
+						email,
+					},
+				},
+				send_id,
+				reply_to_message_id,
+			);
+		},
+	),
+
+	http.get<{
+		id: string;
+	}>(`${MOCK_BASE_URL}/v1/messages/:id/revisions`, ({ params }) =>
+		HttpResponse.json({
+			items: findMessage(params.id)?.revisions ?? [],
+		}),
 	),
 
 	http.post<never, UpdatesBody>(
@@ -266,6 +374,7 @@ export const handlers = [
 		message.body = body;
 		message.version += 1;
 		message.edited_at = Date.now();
+		revise(message, 'EDITED', message.sender);
 		broadcast({
 			message_edited_event: {
 				id: message.id,
@@ -290,7 +399,10 @@ export const handlers = [
 			const deleted = ids.flatMap((id) => {
 				const message = findMessage(id);
 				if (!message) return [];
+				revise(message, 'DELETED', message.sender);
 				message.body = '';
+				delete message.location;
+				delete message.contact;
 				message.deleted = true;
 				broadcast({
 					message_deleted_event: {

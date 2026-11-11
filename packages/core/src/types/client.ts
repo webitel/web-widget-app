@@ -1,7 +1,12 @@
 import type { WidgetError } from '../shared/errors';
 import type { AuthProvider, CaptchaOptions } from './auth';
 import type { ChatState } from './chat';
-import type { Message } from './message';
+import type {
+	Message,
+	MessageContact,
+	MessageLocation,
+	MessageRevision,
+} from './message';
 import type { KeyValueStorage } from './storage';
 
 export interface ClientOptions {
@@ -52,9 +57,12 @@ export interface ButtonPress {
 
 export interface MessagesApi {
 	send(text: string, options?: SendOptions): Promise<void>;
+	sendLocation(location: MessageLocation, options?: SendOptions): Promise<void>;
+	sendContact(contact: MessageContact, options?: SendOptions): Promise<void>;
 	retry(id: string): Promise<void>;
 	edit(id: string, text: string): Promise<void>;
 	delete(id: string): Promise<void>;
+	revisions(id: string): Promise<MessageRevision[]>;
 	loadOlder(): Promise<void>;
 	markRead(): void;
 }

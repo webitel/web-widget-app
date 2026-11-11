@@ -1,5 +1,5 @@
 import { WidgetError } from '../shared/errors';
-import { decodeMessages } from '../wire/message';
+import { decodeMessages, decodeRevision } from '../wire/message';
 import {
 	field,
 	readList,
@@ -7,7 +7,7 @@ import {
 	readString,
 	readTime,
 } from '../wire/read';
-import type { ApiOptions, MessageEndpoints } from './types';
+import type { ApiOptions, MessageEndpoints, OutgoingContent } from './types';
 
 export function createMessagesApi({
 	http,
@@ -30,14 +30,13 @@ export function createMessagesApi({
 				updatesCursor: readString(response, 'updates_cursor'),
 			};
 		},
-		async sendText(request) {
-			const { threadId } = request;
+		async send({ content, sendId, threadId, replyToId, variables }) {
 			const response = await http.request({
 				method: 'POST',
-				path: 'v1/messages/text',
+				path: `v1/messages/${content.type}`,
 				body: {
-					body: request.text,
-					send_id: request.sendId,
+					...encodeContent(content),
+					send_id: sendId,
 					to: threadId
 						? {
 								thread_id: threadId,
@@ -45,8 +44,9 @@ export function createMessagesApi({
 						: {
 								channel_id: channelId,
 							},
-					variables: threadId ? undefined : request.variables,
-					reply_to_message_id: request.replyToId,
+					variables:
+						threadId || content.type !== 'text' ? undefined : variables,
+					reply_to_message_id: replyToId,
 				},
 			});
 			return {
@@ -84,6 +84,12 @@ export function createMessagesApi({
 			}
 			return readTime(response, 'deleted_at');
 		},
+		async revisions(id) {
+			const response = await http.request({
+				path: `v1/messages/${id}/revisions`,
+			});
+			return readList(response, 'items').map(decodeRevision);
+		},
 		async react(id, emoji) {
 			await http.request({
 				method: 'POST',
@@ -110,4 +116,23 @@ export function createMessagesApi({
 			});
 		},
 	};
+}
+
+function encodeContent(content: OutgoingContent): Record<string, unknown> {
+	switch (content.type) {
+		case 'text':
+			return {
+				body: content.text,
+			};
+		case 'location':
+			return {
+				...content.location,
+			};
+		case 'contact':
+			return {
+				name: content.contact.name,
+				phone_number: content.contact.phone,
+				email: content.contact.email,
+			};
+	}
 }

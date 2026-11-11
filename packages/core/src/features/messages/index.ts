@@ -1,3 +1,4 @@
+import type { OutgoingContent } from '../../api/types';
 import { toWidgetError } from '../../shared/errors';
 import { withMessages, withThread } from '../../store/chat';
 import {
@@ -9,10 +10,11 @@ import {
 	setMessageStatus,
 	upsertMessage,
 } from '../../store/messages';
+import type { SendOptions } from '../../types/client';
 import type { Message } from '../../types/message';
 import type { FeatureContext, MessagesFeature } from '../types';
 import { subscribeMessageEvents } from './handlers';
-import { createOutgoingMessage, toReply } from './outgoing';
+import { createOutgoingMessage, toContent, toReply } from './outgoing';
 
 export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 	const { api, store, session } = ctx;
@@ -22,8 +24,8 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 		const sendId = message.sendId ?? message.id;
 
 		try {
-			const sent = await api.messages.sendText({
-				text: message.text,
+			const sent = await api.messages.send({
+				content: toContent(message),
 				sendId,
 				threadId,
 				replyToId: message.replyTo?.id,
@@ -43,21 +45,46 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 		}
 	};
 
+	const send = async (content: OutgoingContent, options: SendOptions) => {
+		const { threadId, messages } = store.getSnapshot();
+		const replyTo = options.replyTo
+			? toReply(findMessage(messages, options.replyTo))
+			: undefined;
+		const message = createOutgoingMessage(content, threadId, replyTo);
+		store.setState(withMessages((list) => upsertMessage(list, message)));
+		await deliver(message);
+	};
+
 	subscribeMessageEvents(ctx);
 
 	return {
 		async send(text, options = {}) {
 			const body = text.trim();
 			if (!body) return;
-
-			const { threadId, messages } = store.getSnapshot();
-			const replyTo = options.replyTo
-				? toReply(findMessage(messages, options.replyTo))
-				: undefined;
-			const message = createOutgoingMessage(body, threadId, replyTo);
-			store.setState(withMessages((list) => upsertMessage(list, message)));
-			await deliver(message);
+			await send(
+				{
+					type: 'text',
+					text: body,
+				},
+				options,
+			);
 		},
+		sendLocation: (location, options = {}) =>
+			send(
+				{
+					type: 'location',
+					location,
+				},
+				options,
+			),
+		sendContact: (contact, options = {}) =>
+			send(
+				{
+					type: 'contact',
+					contact,
+				},
+				options,
+			),
 		async retry(id) {
 			const message = findMessage(store.getSnapshot().messages, id);
 			if (message?.status !== 'failed') return;
@@ -92,5 +119,6 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 				withMessages((list) => deleteMessage(list, id, deletedAt)),
 			);
 		},
+		revisions: api.messages.revisions,
 	};
 }

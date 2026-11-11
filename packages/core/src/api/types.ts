@@ -1,7 +1,12 @@
 import type { Session } from '../session/types';
 import type { HttpClient, Socket } from '../transport/types';
 import type { ButtonPress, Variables } from '../types/client';
-import type { Message } from '../types/message';
+import type {
+	Message,
+	MessageContact,
+	MessageLocation,
+	MessageRevision,
+} from '../types/message';
 import type { Identity } from '../wire/types';
 
 export interface AuthEndpoints {
@@ -28,8 +33,22 @@ export interface MessagePage {
 	updatesCursor: string | undefined;
 }
 
-export interface SendTextRequest {
-	text: string;
+export type OutgoingContent =
+	| {
+			type: 'text';
+			text: string;
+	  }
+	| {
+			type: 'location';
+			location: MessageLocation;
+	  }
+	| {
+			type: 'contact';
+			contact: MessageContact;
+	  };
+
+export interface SendRequest {
+	content: OutgoingContent;
 	sendId: string;
 	threadId: string | undefined;
 	replyToId: string | undefined;
@@ -48,9 +67,10 @@ export interface EditedMessage {
 
 export interface MessageEndpoints {
 	page(threadId: string, size: number, before?: string): Promise<MessagePage>;
-	sendText(request: SendTextRequest): Promise<SentMessage>;
+	send(request: SendRequest): Promise<SentMessage>;
 	edit(id: string, text: string): Promise<EditedMessage>;
 	delete(id: string): Promise<number | undefined>;
+	revisions(id: string): Promise<MessageRevision[]>;
 	react(id: string, emoji: string): Promise<void>;
 	press(id: string, button: ButtonPress): Promise<void>;
 	ack(eventId: string): void;

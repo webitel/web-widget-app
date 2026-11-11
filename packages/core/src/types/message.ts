@@ -31,6 +31,29 @@ export interface MessageReaction {
 	reactedByMe: boolean;
 }
 
+export interface MessageLocation {
+	latitude: number;
+	longitude: number;
+	name?: string | undefined;
+	address?: string | undefined;
+}
+
+export interface MessageContact {
+	name?: string | undefined;
+	phone?: string | undefined;
+	email?: string | undefined;
+}
+
+export type RevisionAction = 'created' | 'edited' | 'deleted' | 'unknown';
+
+export interface MessageRevision {
+	version: number;
+	action: RevisionAction;
+	text: string;
+	changedAt: number | undefined;
+	changedBy: string | undefined;
+}
+
 export interface MessageReply {
 	id: string;
 	text: string;
@@ -49,6 +72,8 @@ export interface Message {
 	text: string;
 	images: MessageFile[];
 	files: MessageFile[];
+	location: MessageLocation | undefined;
+	contact: MessageContact | undefined;
 	replyTo: MessageReply | undefined;
 	createdAt: number;
 	editedAt: number | undefined;
