@@ -2,7 +2,7 @@ import type { VariablesApi } from '../../types/client';
 import type { FeatureContext } from '../context';
 
 export function createVariablesFeature(ctx: FeatureContext): VariablesApi {
-	const { session, store } = ctx;
+	const { api, session, store } = ctx;
 
 	return {
 		get: () => ({
@@ -15,18 +15,7 @@ export function createVariablesFeature(ctx: FeatureContext): VariablesApi {
 			};
 
 			const { threadId } = store.getSnapshot();
-			if (!threadId) return;
-
-			await ctx.http.request({
-				method: 'POST',
-				path: `v1/threads/${threadId}/variables`,
-				body: {
-					variables: Object.entries(variables).map(([key, value]) => ({
-						key,
-						value,
-					})),
-				},
-			});
+			if (threadId) await api.threads.setVariables(threadId, variables);
 		},
 	};
 }

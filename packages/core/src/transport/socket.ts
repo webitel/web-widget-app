@@ -13,17 +13,6 @@ import {
 
 const CONNECT_TIMEOUT = 10_000;
 
-export type SocketCommand =
-	| {
-			type: 'ack';
-			event_id: string;
-	  }
-	| {
-			type: 'read';
-			thread_id: string;
-			seq: number;
-	  };
-
 export interface SocketOptions {
 	baseUrl: string;
 	getToken: () => Promise<string>;
@@ -35,7 +24,7 @@ export interface SocketOptions {
 export interface Socket {
 	connect(): Promise<void>;
 	disconnect(): void;
-	send(command: SocketCommand): boolean;
+	send(command: object): boolean;
 }
 
 type DisconnectEvent = Extract<

@@ -1,3 +1,4 @@
+import { createApi } from './api';
 import type { FeatureContext, Session } from './features/context';
 import { createHistoryFeature } from './features/history';
 import { createInteractiveFeature } from './features/interactive';
@@ -61,9 +62,12 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 	});
 
 	const ctx: FeatureContext = {
-		options,
-		http: createHttpClient(options),
-		socket,
+		api: createApi({
+			http: createHttpClient(options),
+			socket,
+			session,
+			channelId: options.channelId,
+		}),
 		store,
 		events,
 		emitter,

@@ -1,4 +1,4 @@
-import { toWidgetError, WidgetError } from '../../shared/errors';
+import { toWidgetError } from '../../shared/errors';
 import { withMessages, withThread } from '../../store/chat';
 import {
 	confirmMessage,
@@ -12,13 +12,6 @@ import {
 import type { MessagesApi } from '../../types/client';
 import type { Message, MessageReply } from '../../types/message';
 import { decodeMessage } from '../../wire/message';
-import {
-	field,
-	readList,
-	readNumber,
-	readString,
-	readTime,
-} from '../../wire/read';
 import type { FeatureContext } from '../context';
 
 export type MessagesFeature = Pick<
@@ -27,36 +20,26 @@ export type MessagesFeature = Pick<
 >;
 
 export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
-	const { http, store, session } = ctx;
+	const { api, store, session } = ctx;
 
 	const deliver = async (message: Message) => {
 		const { threadId } = store.getSnapshot();
 		const sendId = message.sendId ?? message.id;
 
 		try {
-			const response = await http.request({
-				method: 'POST',
-				path: 'v1/messages/text',
-				body: {
-					body: message.text,
-					send_id: sendId,
-					to: threadId
-						? {
-								thread_id: threadId,
-							}
-						: {
-								channel_id: ctx.options.channelId,
-							},
-					variables: threadId ? undefined : session.variables,
-					reply_to_message_id: message.replyTo?.id,
-				},
+			const sent = await api.messages.sendText({
+				text: message.text,
+				sendId,
+				threadId,
+				replyToId: message.replyTo?.id,
+				variables: session.variables,
 			});
-
-			const id = readString(response, 'id') ?? message.id;
+			store.setState(withThread(sent.threadId));
 			store.setState(
-				withThread(readString(field(response, 'to'), 'thread_id')),
+				withMessages((list) =>
+					confirmMessage(list, sendId, sent.id ?? message.id),
+				),
 			);
-			store.setState(withMessages((list) => confirmMessage(list, sendId, id)));
 		} catch (error) {
 			store.setState(
 				withMessages((list) => setMessageStatus(list, sendId, 'failed')),
@@ -72,12 +55,7 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 				if (!message) return;
 				store.setState(withThread(message.threadId));
 				store.setState(withMessages((list) => upsertMessage(list, message)));
-				if (message.author !== 'client' && id) {
-					ctx.socket.send({
-						type: 'ack',
-						event_id: id,
-					});
-				}
+				if (message.author !== 'client' && id) api.messages.ack(id);
 				ctx.emitter.emit('message', message);
 				return;
 			}
@@ -131,19 +109,12 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 			const body = text.trim();
 			if (!body) return;
 
-			const response = await http.request({
-				method: 'PATCH',
-				path: `v1/messages/${id}`,
-				body: {
-					body,
-				},
-			});
+			const edited = await api.messages.edit(id, body);
 			store.setState(
 				withMessages((list) =>
 					editMessage(list, id, {
 						text: body,
-						version: readNumber(response, 'version') ?? 0,
-						editedAt: readTime(response, 'edited_at'),
+						...edited,
 					}),
 				),
 			);
@@ -155,24 +126,9 @@ export function createMessagesFeature(ctx: FeatureContext): MessagesFeature {
 				return;
 			}
 
-			const response = await http.request({
-				method: 'POST',
-				path: 'v1/messages/delete',
-				body: {
-					ids: [
-						id,
-					],
-				},
-			});
-			if (!readList(response, 'deleted_ids').includes(id)) {
-				throw new WidgetError('unknown', 'Message was not deleted', {
-					details: readList(response, 'skipped'),
-				});
-			}
+			const deletedAt = await api.messages.delete(id);
 			store.setState(
-				withMessages((list) =>
-					deleteMessage(list, id, readTime(response, 'deleted_at')),
-				),
+				withMessages((list) => deleteMessage(list, id, deletedAt)),
 			);
 		},
 	};

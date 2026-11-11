@@ -4,7 +4,7 @@ import type { ReactionsApi } from '../../types/client';
 import type { FeatureContext } from '../context';
 
 export function createReactionsFeature(ctx: FeatureContext): ReactionsApi {
-	const { http, store } = ctx;
+	const { api, store } = ctx;
 
 	ctx.events.on('envelope', ({ event }) => {
 		if (event.type !== 'reaction' || !event.messageId) return;
@@ -19,18 +19,8 @@ export function createReactionsFeature(ctx: FeatureContext): ReactionsApi {
 		);
 	});
 
-	const react = async (messageId: string, emoji: string) => {
-		await http.request({
-			method: 'POST',
-			path: `v1/messages/${messageId}/reaction`,
-			body: {
-				emoji,
-			},
-		});
-	};
-
 	return {
-		set: react,
-		clear: (messageId) => react(messageId, ''),
+		set: api.messages.react,
+		clear: (messageId) => api.messages.react(messageId, ''),
 	};
 }

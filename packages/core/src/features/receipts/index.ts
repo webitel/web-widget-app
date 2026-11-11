@@ -37,24 +37,9 @@ export function createReceiptsFeature(ctx: FeatureContext): ReceiptsFeature {
 
 			store.setState(withHorizon(true, 'read', seq));
 
-			const sent = ctx.socket.send({
-				type: 'read',
-				thread_id: threadId,
-				seq,
+			ctx.api.threads.markRead(threadId, seq).catch((error: unknown) => {
+				ctx.emitter.emit('error', toWidgetError(error));
 			});
-			if (sent) return;
-
-			ctx.http
-				.request({
-					method: 'POST',
-					path: `v1/threads/${threadId}/read`,
-					body: {
-						up_to_seq: String(seq),
-					},
-				})
-				.catch((error: unknown) => {
-					ctx.emitter.emit('error', toWidgetError(error));
-				});
 		},
 	};
 }

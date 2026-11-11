@@ -5,7 +5,7 @@ import type { FeatureContext } from '../context';
 const NOTIFY_INTERVAL = 3000;
 
 export function createTypingFeature(ctx: FeatureContext): TypingApi {
-	const { http, store, session } = ctx;
+	const { api, store, session } = ctx;
 	let lastSentAt = 0;
 
 	ctx.events.on('envelope', ({ event }) => {
@@ -25,15 +25,9 @@ export function createTypingFeature(ctx: FeatureContext): TypingApi {
 			if (!threadId || now - lastSentAt < NOTIFY_INTERVAL) return;
 			lastSentAt = now;
 
-			http
-				.request({
-					method: 'POST',
-					path: `v1/threads/${threadId}/typing`,
-					body: {},
-				})
-				.catch(() => {
-					lastSentAt = 0;
-				});
+			api.threads.typing(threadId).catch(() => {
+				lastSentAt = 0;
+			});
 		},
 	};
 }

@@ -1,18 +1,9 @@
+import type { ThreadUpdates } from '../api/updates';
 import type { FeatureContext } from '../features/context';
 import type { HistoryFeature } from '../features/history';
 import { toWidgetError } from '../shared/errors';
 import { withHorizon, withMessages, withThread } from '../store/chat';
 import { deleteMessage, upsertMessage } from '../store/messages';
-import { contactOf, isSameIdentity, readIdentity } from '../wire/identity';
-import { decodeMessages } from '../wire/message';
-import {
-	field,
-	readBoolean,
-	readList,
-	readNumber,
-	readString,
-	readTime,
-} from '../wire/read';
 
 export interface Sync {
 	load(): Promise<void>;
@@ -23,7 +14,7 @@ export function createSync(
 	ctx: FeatureContext,
 	history: Pick<HistoryFeature, 'loadLatest'>,
 ): Sync {
-	const { http, store, session, cursor } = ctx;
+	const { api, store, session, cursor } = ctx;
 	let loading: Promise<void> | undefined;
 	let ready = false;
 
@@ -32,10 +23,7 @@ export function createSync(
 	};
 
 	const identify = async () => {
-		const response = await http.request({
-			path: 'v1/auth/token',
-		});
-		session.self = readIdentity(field(response, 'contact'));
+		session.self = await api.auth.me();
 	};
 
 	const load = () => {
@@ -50,58 +38,41 @@ export function createSync(
 		return loading;
 	};
 
-	const applyThreadUpdates = (thread: unknown) => {
-		const threadId = readString(thread, 'thread_id');
+	const applyThreadUpdates = (thread: ThreadUpdates) => {
+		const { threadId } = thread;
 		const current = store.getSnapshot().threadId;
 		if (current && threadId !== current) return;
 
 		store.setState(withThread(threadId));
-
-		const messages = decodeMessages(readList(thread, 'messages'), session.self);
-		const deleted = readList(thread, 'deleted_messages');
 		store.setState(
-			withMessages((list) => {
-				let result = messages.reduce(upsertMessage, list);
-				for (const item of deleted) {
-					const id = readString(item, 'id');
-					if (!id) continue;
-					result = deleteMessage(result, id, readTime(item, 'deleted_at'));
-				}
-				return result;
-			}),
+			withMessages((list) =>
+				thread.deleted.reduce(
+					(result, { id, deletedAt }) => deleteMessage(result, id, deletedAt),
+					thread.messages.reduce(upsertMessage, list),
+				),
+			),
 		);
 
-		for (const readState of readList(thread, 'read_states')) {
-			const member = readIdentity(contactOf(readState, 'member'));
-			const isSelf = isSameIdentity(member, session.self);
-			const delivered = readNumber(readState, 'delivered_up_to_seq');
-			const read = readNumber(readState, 'read_up_to_seq');
-			if (delivered) {
-				store.setState(withHorizon(isSelf, 'delivered', delivered));
+		for (const state of thread.readStates) {
+			if (state.deliveredUpToSeq) {
+				store.setState(
+					withHorizon(state.isSelf, 'delivered', state.deliveredUpToSeq),
+				);
 			}
-			if (read) {
-				store.setState(withHorizon(isSelf, 'read', read));
+			if (state.readUpToSeq) {
+				store.setState(withHorizon(state.isSelf, 'read', state.readUpToSeq));
 			}
 		}
 	};
 
 	const catchUp = async (from = cursor.get()) => {
-		const response = await http.request({
-			method: 'POST',
-			path: 'v1/updates',
-			body: {
-				cursor: from,
-			},
-		});
-
-		if (readBoolean(response, 'resync')) {
+		const updates = await api.updates.get(from);
+		if (updates.resync) {
 			await history.loadLatest();
 		} else {
-			for (const thread of readList(response, 'threads')) {
-				applyThreadUpdates(thread);
-			}
+			updates.threads.forEach(applyThreadUpdates);
 		}
-		cursor.save(readString(response, 'cursor'));
+		cursor.save(updates.cursor);
 	};
 
 	ctx.events.on('envelope', ({ event }) => {
