@@ -1,11 +1,16 @@
 import type { WidgetError } from '../shared/errors';
-import type { AuthProvider, CaptchaOptions } from '../types/auth';
+import type { CaptchaOptions } from '../types/auth';
 import type { ConnectionState } from '../types/client';
 import type { ServerEnvelope, ServerEvent } from '../wire/types';
 
+export interface TokenProvider {
+	getToken(): Promise<string>;
+	invalidate(): void;
+}
+
 export interface SocketOptions {
 	baseUrl: string;
-	getToken: () => Promise<string>;
+	token: TokenProvider;
 	decode: (data: unknown) => ServerEnvelope;
 	onEnvelope: (envelope: ServerEnvelope) => void;
 	onStateChange: (state: ConnectionState) => void;
@@ -15,6 +20,7 @@ export interface SocketOptions {
 export interface Socket {
 	connect(): Promise<void>;
 	disconnect(): void;
+	restart(): void;
 	send(command: object): boolean;
 }
 
@@ -49,6 +55,7 @@ export interface HttpRequest {
 	body?: unknown;
 	signal?: AbortSignal;
 	captchaAction?: string;
+	anonymous?: boolean;
 }
 
 export interface HttpUploadRequest {
@@ -61,7 +68,7 @@ export interface HttpUploadRequest {
 
 export interface HttpClientOptions {
 	baseUrl: string;
-	auth: AuthProvider;
+	token: TokenProvider;
 	captcha?: CaptchaOptions;
 	tokenHeader?: string;
 }

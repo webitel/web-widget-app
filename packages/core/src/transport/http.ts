@@ -21,15 +21,17 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
 		return `${baseUrl}/${path.replace(/^\/+/, '')}${qs ? `?${qs}` : ''}`;
 	};
 
-	const buildHeaders = async (captchaAction?: string) => {
+	const buildHeaders = async (captchaAction?: string, anonymous = false) => {
 		const headers: Record<string, string> = {};
 
-		try {
-			headers[tokenHeader] = await options.auth.getToken();
-		} catch (cause) {
-			throw new WidgetError('auth', 'Failed to get access token', {
-				cause,
-			});
+		if (!anonymous) {
+			try {
+				headers[tokenHeader] = await options.token.getToken();
+			} catch (cause) {
+				throw new WidgetError('auth', 'Failed to get access token', {
+					cause,
+				});
+			}
 		}
 
 		if (captchaAction && options.captcha) {
@@ -47,7 +49,10 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
 	};
 
 	const send = async (request: HttpRequest) => {
-		const headers = await buildHeaders(request.captchaAction);
+		const headers = await buildHeaders(
+			request.captchaAction,
+			request.anonymous,
+		);
 		let body: BodyInit | null = null;
 
 		if (request.body instanceof FormData || request.body instanceof Blob) {
@@ -75,7 +80,10 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
 	return {
 		async request(request) {
 			let response = await send(request);
-			if (response.status === 401) response = await send(request);
+			if (response.status === 401 && !request.anonymous) {
+				options.token.invalidate();
+				response = await send(request);
+			}
 
 			const details = parseBody(await response.text());
 			if (!response.ok) throw statusError(response.status, details, 'unknown');

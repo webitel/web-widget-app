@@ -1,5 +1,5 @@
 import type { WidgetError } from '../shared/errors';
-import type { AuthProvider, CaptchaOptions } from './auth';
+import type { AuthProvider, CaptchaOptions, IdentityAuth } from './auth';
 import type { ChatState } from './chat';
 import type {
 	Message,
@@ -12,7 +12,7 @@ import type { KeyValueStorage } from './storage';
 export interface ClientOptions {
 	baseUrl: string;
 	channelId: string;
-	auth: AuthProvider;
+	auth: AuthProvider | IdentityAuth;
 	captcha?: CaptchaOptions;
 	storage?: KeyValueStorage;
 }

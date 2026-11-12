@@ -4,6 +4,8 @@ export const MOCK_BASE_URL = 'https://fake.webitel.local';
 
 const THREAD_ID = 'thread-1';
 
+let tokens = 0;
+
 const client = {
 	id: 'member-client',
 	contact: {
@@ -23,6 +25,15 @@ const operator = {
 };
 
 type Peer = typeof client;
+
+interface TokenBody {
+	identity?: {
+		sub: string;
+		iss: string;
+		name?: string;
+	};
+	refresh_token?: string;
+}
 
 interface SendTextBody {
 	body: string;
@@ -256,6 +267,28 @@ const socketHandler: WebSocketHandler = im.addEventListener(
 
 export const handlers = [
 	socketHandler,
+
+	http.post<never, TokenBody>(
+		`${MOCK_BASE_URL}/v1/auth/token`,
+		async ({ request }) => {
+			const { identity } = await request.json();
+			await delay(100);
+			if (identity) {
+				client.contact.sub = identity.sub;
+				client.contact.iss = identity.iss;
+			}
+			tokens += 1;
+			return HttpResponse.json({
+				contact: client.contact,
+				token: {
+					access_token: `mock-access-${tokens}`,
+					refresh_token: `mock-refresh-${tokens}`,
+					expires_in: 3600,
+					token_type: 'bearer',
+				},
+			});
+		},
+	),
 
 	http.get(`${MOCK_BASE_URL}/v1/auth/token`, async () => {
 		await delay(150);

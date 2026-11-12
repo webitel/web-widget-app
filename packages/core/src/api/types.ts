@@ -9,7 +9,31 @@ import type {
 } from '../types/message';
 import type { Identity } from '../wire/types';
 
+export interface IdentityClaims {
+	sub: string;
+	iss: string;
+	name: string;
+	email?: string | undefined;
+	phone?: string | undefined;
+	locale?: string | undefined;
+}
+
+export type TokenGrant =
+	| {
+			identity: IdentityClaims;
+	  }
+	| {
+			refreshToken: string;
+	  };
+
+export interface IssuedToken {
+	accessToken: string;
+	refreshToken: string | undefined;
+	expiresIn: number | undefined;
+}
+
 export interface AuthEndpoints {
+	token(grant: TokenGrant): Promise<IssuedToken>;
 	me(): Promise<Identity | undefined>;
 }
 
@@ -17,6 +41,7 @@ export interface ApiOptions {
 	http: HttpClient;
 	socket: Socket;
 	session: Session;
+	clientId: string;
 }
 
 export interface Api {

@@ -1,4 +1,5 @@
 import { createApi } from './api';
+import { createTokenSource } from './auth';
 import { createHistoryFeature } from './features/history';
 import { createInteractiveFeature } from './features/interactive';
 import { createMessagesFeature } from './features/messages';
@@ -41,9 +42,16 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 		emitter.emit('connection', next);
 	};
 
+	const tokens = createTokenSource({
+		auth: options.auth,
+		storage,
+		issue: (grant) => api.auth.token(grant),
+		onRefresh: () => socket.restart(),
+	});
+
 	const socket = createSocket({
 		baseUrl: options.baseUrl,
-		getToken: () => options.auth.getToken(),
+		token: tokens,
 		decode: (data) => decodeServerEnvelope(data, session.self),
 		onEnvelope({ updatesCursor, event }) {
 			cursor.save(updatesCursor);
@@ -60,9 +68,16 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 	});
 
 	const api = createApi({
-		http: createHttpClient(options),
+		http: createHttpClient({
+			baseUrl: options.baseUrl,
+			token: tokens,
+			...(options.captcha && {
+				captcha: options.captcha,
+			}),
+		}),
 		socket,
 		session,
+		clientId: options.channelId,
 	});
 
 	const ctx: FeatureContext = {
@@ -101,9 +116,13 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 			await socket.connect();
 			await sync.load();
 		},
-		disconnect: socket.disconnect,
+		disconnect() {
+			socket.disconnect();
+			tokens.stop();
+		},
 		reset() {
 			socket.disconnect();
+			tokens.reset();
 			storage.clear();
 			sync.reset();
 			session.reset();

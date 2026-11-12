@@ -12,7 +12,7 @@ const client = createClient({
 	baseUrl: MOCK_BASE_URL,
 	channelId: 'fake-widget',
 	auth: {
-		getToken: async () => 'fake-token',
+		issuer: 'https://fake.webitel.local',
 	},
 });
 

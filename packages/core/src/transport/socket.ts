@@ -75,7 +75,7 @@ export function createSocket(options: SocketOptions): Socket {
 	const authenticate = async (socket: WebSocket) => {
 		setState('authenticating');
 		try {
-			const token = await options.getToken();
+			const token = await options.token.getToken();
 			if (socket === ws) {
 				socket.send(
 					JSON.stringify({
@@ -119,7 +119,10 @@ export function createSocket(options: SocketOptions): Socket {
 			disconnect?.status === 'UNAUTHORIZED' ||
 			disconnect?.code === 401 ||
 			event.reason.startsWith('401');
-		if (unauthorized) authFailures += 1;
+		if (unauthorized) {
+			authFailures += 1;
+			options.token.invalidate();
+		}
 
 		const error =
 			authFailures > 1
@@ -177,6 +180,11 @@ export function createSocket(options: SocketOptions): Socket {
 		},
 		disconnect() {
 			stop(new WidgetError('network', 'Socket disconnected'));
+		},
+		restart() {
+			if (!ws) return;
+			retries.cancel();
+			open();
 		},
 		send(command) {
 			if (state !== 'connected' || !ws) return false;
