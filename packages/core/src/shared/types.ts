@@ -9,6 +9,9 @@ export type WidgetErrorCode =
 	| 'network'
 	| 'auth'
 	| 'captcha'
+	| 'bad_request'
+	| 'forbidden'
+	| 'not_found'
 	| 'forbidden_file'
 	| 'file_too_large'
 	| 'upload_failed'
@@ -18,6 +21,7 @@ export type WidgetErrorCode =
 
 export interface WidgetErrorOptions {
 	status?: number;
+	reason?: string | undefined;
 	details?: unknown;
 	cause?: unknown;
 }
