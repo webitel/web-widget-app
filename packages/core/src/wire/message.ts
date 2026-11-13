@@ -7,10 +7,12 @@ import type {
 	MessageReaction,
 	MessageReply,
 	MessageRevision,
+	MessageSystem,
 	MessageType,
 	RevisionAction,
 } from '../types/message';
 import { contactOf, isSameIdentity, readIdentity } from './identity';
+import { decodeMemberAction } from './member';
 import {
 	field,
 	readBoolean,
@@ -64,6 +66,7 @@ export function decodeMessage(
 		version: readNumber(source, 'version') ?? 0,
 		status: 'sent',
 		reactions: decodeReactions(readList(source, 'reactions')),
+		system: decodeSystem(field(source, 'system')),
 		raw: source,
 	};
 }
@@ -106,6 +109,14 @@ const revisionActions: RevisionAction[] = [
 function decodeRevisionAction(value: string | undefined): RevisionAction {
 	const action = value?.replace('MESSAGE_REVISION_ACTION_', '').toLowerCase();
 	return revisionActions.find((known) => known === action) ?? 'unknown';
+}
+
+function decodeSystem(source: unknown): MessageSystem | undefined {
+	if (!source) return undefined;
+	return {
+		action: decodeMemberAction(readString(source, 'type')) ?? 'unknown',
+		name: readString(field(source, 'metadata'), 'name'),
+	};
 }
 
 function decodeLocation(source: unknown): MessageLocation | undefined {

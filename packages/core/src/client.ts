@@ -2,6 +2,7 @@ import { createApi } from './api';
 import { createTokenSource } from './auth';
 import { createHistoryFeature } from './features/history';
 import { createInteractiveFeature } from './features/interactive';
+import { subscribeMemberEvents } from './features/members';
 import { createMessagesFeature } from './features/messages';
 import { createReactionsFeature } from './features/reactions';
 import { createReceiptsFeature } from './features/receipts';
@@ -98,6 +99,7 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 	const reactions = createReactionsFeature(ctx);
 	const typing = createTypingFeature(ctx);
 	const interactive = createInteractiveFeature(ctx);
+	subscribeMemberEvents(ctx);
 
 	return {
 		get connectionState() {

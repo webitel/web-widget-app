@@ -44,6 +44,12 @@ export type ServerEvent =
 			reactions: MessageReaction[];
 	  }
 	| {
+			type: 'member';
+			eventId: string | undefined;
+			threadId: string | undefined;
+			change: MemberChange;
+	  }
+	| {
 			type: 'typing';
 			from: Identity | undefined;
 			name: string | undefined;
@@ -65,6 +71,16 @@ export interface ServerEnvelope {
 }
 
 export interface Identity {
+	id: string | undefined;
 	sub: string;
 	iss: string | undefined;
+}
+
+export type MemberAction = 'joined' | 'left';
+
+export interface MemberChange {
+	action: MemberAction;
+	contactId: string | undefined;
+	name: string | undefined;
+	isBot: boolean;
 }

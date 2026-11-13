@@ -9,6 +9,7 @@ let tokens = 0;
 const client = {
 	id: 'member-client',
 	contact: {
+		id: 'contact-client',
 		sub: 'client-1',
 		iss: 'widget',
 		name: 'You',
@@ -18,6 +19,7 @@ const client = {
 const operator = {
 	id: 'member-operator',
 	contact: {
+		id: 'contact-operator',
 		sub: 'operator-1',
 		iss: 'webitel',
 		name: 'Operator Anna',
@@ -225,7 +227,11 @@ const sent = async (
 	replyToId: string | undefined,
 ) => {
 	await delay(150);
-	threadExists = true;
+	if (!threadExists) {
+		threadExists = true;
+		memberEvent(client, 'joined');
+		setTimeout(operatorJoins, 300);
+	}
 	const message = addMessage(client, content, sendId, replyToId);
 	replyTo(message);
 	return HttpResponse.json({
@@ -235,6 +241,29 @@ const sent = async (
 		},
 	});
 };
+
+const memberEvent = (peer: Peer, action: 'joined' | 'left') => {
+	cursor += 1;
+	broadcast({
+		[action === 'joined' ? 'member_added_event' : 'member_left_event']: {
+			thread_id: THREAD_ID,
+			contact_id: peer.contact.id,
+			metadata: {
+				name: peer.contact.name,
+			},
+			updates_cursor: String(cursor),
+			action,
+		},
+	});
+};
+
+export function operatorJoins(): void {
+	memberEvent(operator, 'joined');
+}
+
+export function operatorLeaves(): void {
+	memberEvent(operator, 'left');
+}
 
 export function operatorSays(text: string): void {
 	threadExists = true;

@@ -1,4 +1,5 @@
 import { contactOf, isSameIdentity, readIdentity } from '../wire/identity';
+import { decodeThreadMemberChange } from '../wire/member';
 import { decodeMessages } from '../wire/message';
 import {
 	readBoolean,
@@ -33,6 +34,9 @@ export function createUpdatesApi({
 			deliveredUpToSeq: readNumber(state, 'delivered_up_to_seq'),
 			readUpToSeq: readNumber(state, 'read_up_to_seq'),
 		})),
+		memberChanges: readList(thread, 'member_changes').flatMap(
+			(item) => decodeThreadMemberChange(item) ?? [],
+		),
 	});
 
 	return {

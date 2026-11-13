@@ -39,6 +39,7 @@ export function createOutgoingMessage(
 		version: 0,
 		status: 'sending',
 		reactions: [],
+		system: undefined,
 		raw: undefined,
 	};
 }

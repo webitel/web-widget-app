@@ -9,6 +9,7 @@ export function readIdentity(contact: unknown): Identity | undefined {
 	const sub = readString(contact, 'sub');
 	if (!sub) return undefined;
 	return {
+		id: readString(contact, 'id'),
 		sub,
 		iss: readString(contact, 'iss'),
 	};

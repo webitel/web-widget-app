@@ -1,4 +1,5 @@
 import type { ThreadUpdates } from '../api/types';
+import { addMemberChange } from '../features/members';
 import type { FeatureContext, HistoryFeature } from '../features/types';
 import { withHorizon, withMessages, withThread } from '../store/chat';
 import { deleteMessage, upsertMessage } from '../store/messages';
@@ -38,6 +39,10 @@ export function createSync(
 				),
 			),
 		);
+
+		for (const change of thread.memberChanges) {
+			addMemberChange(ctx, threadId, change);
+		}
 
 		for (const state of thread.readStates) {
 			if (state.deliveredUpToSeq) {

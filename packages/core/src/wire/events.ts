@@ -1,4 +1,5 @@
 import { contactOf, readIdentity } from './identity';
+import { decodeSocketMemberChange } from './member';
 import { decodeMessage, decodeReactions } from './message';
 import { field, readList, readNumber, readString, readTime } from './read';
 import type { Identity, ServerEnvelope, ServerEvent } from './types';
@@ -82,6 +83,20 @@ function decodeEvent(
 				type: 'reaction',
 				messageId: readString(body, 'message_id'),
 				reactions: decodeReactions(readList(body, 'reactions')),
+			};
+		case 'member_added_event':
+			return {
+				type: 'member',
+				eventId,
+				threadId: readString(body, 'thread_id'),
+				change: decodeSocketMemberChange('joined', body),
+			};
+		case 'member_left_event':
+			return {
+				type: 'member',
+				eventId,
+				threadId: readString(body, 'thread_id'),
+				change: decodeSocketMemberChange('left', body),
 			};
 		case 'typing_event':
 			return {

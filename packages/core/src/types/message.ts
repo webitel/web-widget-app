@@ -54,6 +54,13 @@ export interface MessageRevision {
 	changedBy: string | undefined;
 }
 
+export type SystemAction = 'joined' | 'left' | 'unknown';
+
+export interface MessageSystem {
+	action: SystemAction;
+	name: string | undefined;
+}
+
 export interface MessageReply {
 	id: string;
 	text: string;
@@ -81,5 +88,6 @@ export interface Message {
 	version: number;
 	status: MessageStatus;
 	reactions: MessageReaction[];
+	system: MessageSystem | undefined;
 	raw: unknown;
 }

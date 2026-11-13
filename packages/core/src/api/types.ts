@@ -7,7 +7,7 @@ import type {
 	MessageLocation,
 	MessageRevision,
 } from '../types/message';
-import type { Identity } from '../wire/types';
+import type { Identity, MemberChange } from '../wire/types';
 
 export interface IdentityClaims {
 	sub: string;
@@ -114,6 +114,7 @@ export interface ThreadUpdates {
 		deletedAt: number | undefined;
 	}[];
 	readStates: ReadState[];
+	memberChanges: MemberChange[];
 }
 
 export interface Updates {

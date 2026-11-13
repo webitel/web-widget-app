@@ -1,5 +1,11 @@
 import { setupWorker } from 'msw/browser';
-import { dropConnection, handlers, operatorSays } from './handlers';
+import {
+	dropConnection,
+	handlers,
+	operatorJoins,
+	operatorLeaves,
+	operatorSays,
+} from './handlers';
 
 export async function startMockServer(): Promise<void> {
 	await setupWorker(...handlers).start({
@@ -10,6 +16,8 @@ export async function startMockServer(): Promise<void> {
 	Object.assign(window, {
 		mockServer: {
 			operatorSays,
+			operatorJoins,
+			operatorLeaves,
 			dropConnection,
 		},
 	});

@@ -162,9 +162,12 @@ export function mergeLatestPage(
 }
 
 function isNewer(message: Message, latestSeq: number): boolean {
-	return message.seq === undefined
-		? message.status === 'sending' || message.status === 'failed'
-		: message.seq > latestSeq;
+	if (message.seq !== undefined) return message.seq > latestSeq;
+	return (
+		message.author === 'system' ||
+		message.status === 'sending' ||
+		message.status === 'failed'
+	);
 }
 
 function hasKey(message: Message, key: string): boolean {
