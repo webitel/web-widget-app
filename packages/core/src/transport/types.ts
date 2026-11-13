@@ -54,7 +54,6 @@ export interface HttpRequest {
 	query?: Query;
 	body?: unknown;
 	signal?: AbortSignal;
-	captchaAction?: string;
 	anonymous?: boolean;
 }
 
@@ -62,7 +61,6 @@ export interface HttpUploadRequest {
 	path: string;
 	body: FormData | Blob;
 	signal?: AbortSignal;
-	captchaAction?: string;
 	onProgress?: (progress: UploadProgress) => void;
 }
 

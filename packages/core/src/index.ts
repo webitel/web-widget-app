@@ -1,3 +1,4 @@
+export { createRecaptchaProvider } from './auth/recaptcha';
 export { createClient } from './client';
 export { WidgetError } from './shared/errors';
 export { createStorage } from './shared/storage';

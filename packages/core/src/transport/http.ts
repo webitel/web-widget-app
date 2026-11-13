@@ -21,7 +21,7 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
 		return `${baseUrl}/${path.replace(/^\/+/, '')}${qs ? `?${qs}` : ''}`;
 	};
 
-	const buildHeaders = async (captchaAction?: string, anonymous = false) => {
+	const buildHeaders = async (path: string, anonymous = false) => {
 		const headers: Record<string, string> = {};
 
 		if (!anonymous) {
@@ -34,10 +34,10 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
 			}
 		}
 
-		if (captchaAction && options.captcha) {
+		if (options.captcha) {
 			try {
 				headers[options.captcha.header] =
-					await options.captcha.provider.getToken(captchaAction);
+					await options.captcha.provider.getToken(captchaAction(path));
 			} catch (cause) {
 				throw new WidgetError('captcha', 'Failed to get captcha token', {
 					cause,
@@ -49,10 +49,7 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
 	};
 
 	const send = async (request: HttpRequest) => {
-		const headers = await buildHeaders(
-			request.captchaAction,
-			request.anonymous,
-		);
+		const headers = await buildHeaders(request.path, request.anonymous);
 		let body: BodyInit | null = null;
 
 		if (request.body instanceof FormData || request.body instanceof Blob) {
@@ -93,8 +90,17 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
 			return upload({
 				...request,
 				url: buildUrl(request.path),
-				headers: await buildHeaders(request.captchaAction),
+				headers: await buildHeaders(request.path),
 			});
 		},
 	};
+}
+
+// 'v1/messages/<id>/revisions' -> 'messages_revisions'
+function captchaAction(path: string): string {
+	const words = path
+		.split('/')
+		.filter((segment) => segment !== 'v1')
+		.filter((segment) => /^[a-z_]+$/i.test(segment));
+	return words.join('_') || 'request';
 }
