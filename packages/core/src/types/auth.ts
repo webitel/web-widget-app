@@ -21,5 +21,5 @@ export interface CaptchaProvider {
 
 export interface CaptchaOptions {
 	provider: CaptchaProvider;
-	header: string;
+	header?: string;
 }

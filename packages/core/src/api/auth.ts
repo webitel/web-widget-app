@@ -14,6 +14,7 @@ export function createAuthApi({ http, clientId }: ApiOptions): AuthEndpoints {
 					...encodeGrant(grant),
 				},
 				anonymous: true,
+				captcha: true,
 			});
 			const token = field(response, 'token');
 			const accessToken = readString(token, 'access_token');

@@ -55,6 +55,7 @@ export interface HttpRequest {
 	body?: unknown;
 	signal?: AbortSignal;
 	anonymous?: boolean;
+	captcha?: boolean;
 }
 
 export interface HttpUploadRequest {
