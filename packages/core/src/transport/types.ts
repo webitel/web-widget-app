@@ -66,6 +66,8 @@ export interface HttpUploadRequest {
 
 export interface HttpClientOptions {
 	baseUrl: string;
+	clientId: string;
+	deviceId: () => string;
 	token: TokenProvider;
 	captcha?: CaptchaOptions;
 	tokenHeader?: string;

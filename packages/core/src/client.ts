@@ -10,6 +10,7 @@ import type { FeatureContext } from './features/types';
 import { createTypingFeature } from './features/typing';
 import { createVariablesFeature } from './features/variables';
 import { createSession } from './session';
+import { getDeviceId } from './shared/device';
 import { createEmitter } from './shared/emitter';
 import { toWidgetError } from './shared/errors';
 import { createStorage } from './shared/storage';
@@ -71,6 +72,8 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 	const api = createApi({
 		http: createHttpClient({
 			baseUrl: options.baseUrl,
+			clientId: options.channelId,
+			deviceId: () => getDeviceId(storage),
 			token: tokens,
 			...(options.captcha && {
 				captcha: options.captcha,

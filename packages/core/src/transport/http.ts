@@ -22,7 +22,10 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
 	};
 
 	const buildHeaders = async (path: string, anonymous = false) => {
-		const headers: Record<string, string> = {};
+		const headers: Record<string, string> = {
+			'X-Webitel-Client': options.clientId,
+			'X-Webitel-Device': options.deviceId(),
+		};
 
 		if (!anonymous) {
 			try {
