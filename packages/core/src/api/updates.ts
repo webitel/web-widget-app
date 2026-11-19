@@ -1,13 +1,7 @@
-import { contactOf, isSameIdentity, readIdentity } from '../wire/identity';
 import { decodeThreadMemberChange } from '../wire/member';
 import { decodeMessages } from '../wire/message';
-import {
-	readBoolean,
-	readList,
-	readNumber,
-	readString,
-	readTime,
-} from '../wire/read';
+import { readBoolean, readList, readString, readTime } from '../wire/read';
+import { decodeReadStates } from './read-states';
 import type { ApiOptions, ThreadUpdates, UpdateEndpoints } from './types';
 
 export function createUpdatesApi({
@@ -26,14 +20,7 @@ export function createUpdatesApi({
 					}
 				: [];
 		}),
-		readStates: readList(thread, 'read_states').map((state) => ({
-			isSelf: isSameIdentity(
-				readIdentity(contactOf(state, 'member')),
-				session.self,
-			),
-			deliveredUpToSeq: readNumber(state, 'delivered_up_to_seq'),
-			readUpToSeq: readNumber(state, 'read_up_to_seq'),
-		})),
+		readStates: decodeReadStates(thread, session.self),
 		memberChanges: readList(thread, 'member_changes').flatMap(
 			(item) => decodeThreadMemberChange(item) ?? [],
 		),

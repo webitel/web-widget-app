@@ -130,6 +130,7 @@ export interface UpdateEndpoints {
 export interface LatestThread {
 	threadId: string | undefined;
 	updatesCursor: string | undefined;
+	readStates: ReadState[];
 }
 
 export interface ThreadEndpoints {
