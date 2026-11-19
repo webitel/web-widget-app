@@ -1,4 +1,5 @@
 import type { IssuedToken, TokenGrant } from '../api/types';
+import type { TabLock } from '../shared/tab-lock';
 import type { TokenProvider } from '../transport/types';
 import type { AuthProvider, IdentityAuth } from '../types/auth';
 import type { KeyValueStorage } from '../types/storage';
@@ -11,6 +12,7 @@ export interface TokenSource extends TokenProvider {
 export interface TokenSourceOptions {
 	auth: AuthProvider | IdentityAuth;
 	storage: KeyValueStorage;
+	lock: TabLock;
 	issue: (grant: TokenGrant) => Promise<IssuedToken>;
 	onRefresh: () => void;
 }

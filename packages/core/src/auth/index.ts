@@ -24,7 +24,7 @@ export function createTokenSource(options: TokenSourceOptions): TokenSource {
 
 function createIdentityTokenSource(
 	auth: IdentityAuth,
-	{ storage, issue, onRefresh }: TokenSourceOptions,
+	{ storage, lock, issue, onRefresh }: TokenSourceOptions,
 ): TokenSource {
 	let token = readStoredToken(storage);
 	let pending: Promise<StoredToken> | undefined;
@@ -41,8 +41,15 @@ function createIdentityTokenSource(
 		};
 	};
 
-	const isUsable = (stored: StoredToken | undefined, sub: string) =>
-		stored?.sub === sub &&
+	// Sub without creating a guest: creating happens only under the tab lock.
+	const knownSub = () => auth.user?.sub ?? storage.get(GUEST_KEY);
+
+	const isUsable = (
+		stored: StoredToken | undefined,
+		sub: string | null,
+	): stored is StoredToken =>
+		stored !== undefined &&
+		stored.sub === sub &&
 		(stored.expiresAt === undefined ||
 			stored.expiresAt - REFRESH_MARGIN > Date.now());
 
@@ -61,8 +68,20 @@ function createIdentityTokenSource(
 		return token;
 	};
 
+	// Another tab may have already got a fresh token.
+	const adoptStored = (sub: string): StoredToken | undefined => {
+		const stored = readStoredToken(storage);
+		if (!isUsable(stored, sub)) return undefined;
+		if (stored.accessToken === token?.accessToken) return undefined;
+		token = stored;
+		schedule();
+		return stored;
+	};
+
 	const obtain = async (): Promise<StoredToken> => {
 		const identity = claims();
+		const adopted = adoptStored(identity.sub);
+		if (adopted) return adopted;
 		const refreshToken =
 			token?.sub === identity.sub ? token.refreshToken : undefined;
 		if (refreshToken) {
@@ -80,7 +99,7 @@ function createIdentityTokenSource(
 	};
 
 	const refresh = () => {
-		pending ??= obtain().finally(() => {
+		pending ??= lock(obtain).finally(() => {
 			pending = undefined;
 		});
 		return pending;
@@ -99,7 +118,7 @@ function createIdentityTokenSource(
 
 	return {
 		async getToken() {
-			if (token && isUsable(token, claims().sub)) {
+			if (isUsable(token, knownSub())) {
 				if (timer === undefined) schedule();
 				return token.accessToken;
 			}
