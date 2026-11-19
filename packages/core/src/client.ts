@@ -14,6 +14,8 @@ import { getDeviceId } from './shared/device';
 import { createEmitter } from './shared/emitter';
 import { toWidgetError } from './shared/errors';
 import { createStorage } from './shared/storage';
+import { createTabChannel } from './shared/tab-channel';
+import { createTabLock } from './shared/tab-lock';
 import { initialChatState } from './store/chat';
 import { createStore } from './store/create-store';
 import { createSync } from './sync';
@@ -36,6 +38,8 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 	const cursor = createCursor(storage);
 	const store = createStore(initialChatState);
 	const session = createSession(() => api.auth.me());
+	const tabScope = `webitel-widget:${options.channelId}`;
+	const tabs = createTabChannel(tabScope);
 	let connectionState: ConnectionState = 'idle';
 
 	const setConnectionState = (next: ConnectionState) => {
@@ -47,6 +51,7 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 	const tokens = createTokenSource({
 		auth: options.auth,
 		storage,
+		lock: createTabLock(`${tabScope}:token`),
 		issue: (grant) => api.auth.token(grant),
 		onRefresh: () => socket.restart(),
 	});
@@ -104,6 +109,18 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 	const interactive = createInteractiveFeature(ctx);
 	subscribeMemberEvents(ctx);
 
+	// Storage is shared with other tabs, so it is cleared once by the tab that resets.
+	const resetLocal = () => {
+		socket.disconnect();
+		tokens.reset();
+		sync.reset();
+		session.reset();
+		store.setState(() => initialChatState);
+		setConnectionState('idle');
+		emitter.emit('reset', undefined);
+	};
+	tabs.onReset(resetLocal);
+
 	return {
 		get connectionState() {
 			return connectionState;
@@ -126,14 +143,9 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 			tokens.stop();
 		},
 		reset() {
-			socket.disconnect();
-			tokens.reset();
 			storage.clear();
-			sync.reset();
-			session.reset();
-			store.setState(() => initialChatState);
-			setConnectionState('idle');
-			emitter.emit('reset', undefined);
+			resetLocal();
+			tabs.announceReset();
 		},
 		getSnapshot: store.getSnapshot,
 		subscribe: store.subscribe,
