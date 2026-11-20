@@ -43,6 +43,8 @@ export function decodeMessage(
 	const contact = contactOf(source, 'sender');
 	const type = decodeType(source);
 	const createdAt = readTime(source, 'created_at') ?? Date.now();
+	// History has no version: edited_at is always set and revision_count counts edits.
+	const revisions = readNumber(source, 'revision_count') ?? 0;
 
 	return {
 		id,
@@ -59,11 +61,11 @@ export function decodeMessage(
 		contact: decodeContact(field(source, 'contact')),
 		replyTo: decodeReply(field(source, 'reply_to')),
 		createdAt,
-		editedAt: readTime(source, 'edited_at'),
+		editedAt: revisions ? readTime(source, 'edited_at') : undefined,
 		deletedAt:
 			readTime(source, 'deleted_at') ??
 			(readBoolean(source, 'deleted') ? createdAt : undefined),
-		version: readNumber(source, 'version') ?? 0,
+		version: readNumber(source, 'version') ?? revisions + 1,
 		status: 'sent',
 		reactions: decodeReactions(readList(source, 'reactions')),
 		system: decodeSystem(field(source, 'system')),
