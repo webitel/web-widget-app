@@ -1,4 +1,4 @@
-import { statusError, WidgetError } from '../shared/errors';
+import { statusError, tokenError, WidgetError } from '../shared/errors';
 import { parseBody } from '../shared/parse-body';
 import type {
 	HttpClient,
@@ -39,9 +39,7 @@ export function createHttpClient(options: HttpClientOptions): HttpClient {
 			try {
 				headers[tokenHeader] = await options.token.getToken();
 			} catch (cause) {
-				throw new WidgetError('auth', 'Failed to get access token', {
-					cause,
-				});
+				throw tokenError(cause);
 			}
 		}
 

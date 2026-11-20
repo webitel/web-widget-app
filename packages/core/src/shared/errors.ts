@@ -41,17 +41,31 @@ export function toWidgetError(error: unknown): WidgetError {
 	);
 }
 
+// Keeps the reason (captcha, network) when the token request itself failed.
+export function tokenError(cause: unknown): WidgetError {
+	if (cause instanceof WidgetError) return cause;
+	return new WidgetError('auth', 'Failed to get access token', {
+		cause,
+	});
+}
+
+// The backend marks captcha errors on /token only in detail, e.g. api.auth.captcha_failed.
+const CAPTCHA_REASON = 'api.auth.captcha_';
+
 export function statusError(
 	status: number,
 	details: unknown,
 	fallback: WidgetErrorCode,
 ): WidgetError {
+	const reason = readReason(details);
 	return new WidgetError(
-		codeFromStatus(status, fallback),
+		reason?.startsWith(CAPTCHA_REASON)
+			? 'captcha'
+			: codeFromStatus(status, fallback),
 		`Request failed with status ${status}`,
 		{
 			status,
-			reason: readReason(details),
+			reason,
 			details,
 		},
 	);
