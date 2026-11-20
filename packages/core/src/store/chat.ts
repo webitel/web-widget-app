@@ -1,3 +1,4 @@
+import type { ReadState } from '../api/types';
 import type { ChatState } from '../types/chat';
 import type { Message } from '../types/message';
 import { mergeLatestPage, setOwnStatusUpTo, upsertMessage } from './messages';
@@ -76,6 +77,18 @@ export function withHorizon(
 				}
 			: state;
 	};
+}
+
+export function withReadStates(states: readonly ReadState[]): Reducer {
+	return (state) =>
+		states.reduce((result, { isSelf, deliveredUpToSeq, readUpToSeq }) => {
+			const delivered = deliveredUpToSeq
+				? withHorizon(isSelf, 'delivered', deliveredUpToSeq)(result)
+				: result;
+			return readUpToSeq
+				? withHorizon(isSelf, 'read', readUpToSeq)(delivered)
+				: delivered;
+		}, state);
 }
 
 export function lastIncomingSeq(state: ChatState): number {

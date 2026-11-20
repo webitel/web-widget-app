@@ -1,7 +1,7 @@
 import type { ThreadUpdates } from '../api/types';
 import { addMemberChange } from '../features/members';
 import type { FeatureContext, HistoryFeature } from '../features/types';
-import { withHorizon, withMessages, withThread } from '../store/chat';
+import { withMessages, withReadStates, withThread } from '../store/chat';
 import { deleteMessage, upsertMessage } from '../store/messages';
 import type { Sync } from './types';
 
@@ -44,16 +44,7 @@ export function createSync(
 			addMemberChange(ctx, threadId, change);
 		}
 
-		for (const state of thread.readStates) {
-			if (state.deliveredUpToSeq) {
-				store.setState(
-					withHorizon(state.isSelf, 'delivered', state.deliveredUpToSeq),
-				);
-			}
-			if (state.readUpToSeq) {
-				store.setState(withHorizon(state.isSelf, 'read', state.readUpToSeq));
-			}
-		}
+		store.setState(withReadStates(thread.readStates));
 	};
 
 	const catchUp = async (from = cursor.get()) => {

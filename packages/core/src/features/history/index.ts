@@ -1,4 +1,8 @@
-import { withLatestPage, withOlderPage } from '../../store/chat';
+import {
+	withLatestPage,
+	withOlderPage,
+	withReadStates,
+} from '../../store/chat';
 import type { FeatureContext, HistoryFeature } from '../types';
 
 const PAGE_SIZE = 50;
@@ -17,8 +21,13 @@ export function createHistoryFeature(ctx: FeatureContext): HistoryFeature {
 			: undefined;
 		olderCursor = page?.olderCursor;
 
-		store.setState(
-			withLatestPage(threadId, page?.messages ?? [], olderCursor !== undefined),
+		const withPage = withLatestPage(
+			threadId,
+			page?.messages ?? [],
+			olderCursor !== undefined,
+		);
+		store.setState((state) =>
+			withReadStates(latest.readStates)(withPage(state)),
 		);
 		ctx.cursor.save(page?.updatesCursor ?? latest.updatesCursor);
 	};

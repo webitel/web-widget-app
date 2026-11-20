@@ -1,9 +1,11 @@
 import { readList, readString } from '../wire/read';
+import { decodeReadStates } from './read-states';
 import type { ApiOptions, ThreadEndpoints } from './types';
 
 export function createThreadsApi({
 	http,
 	socket,
+	session,
 }: ApiOptions): ThreadEndpoints {
 	return {
 		async latest() {
@@ -13,9 +15,11 @@ export function createThreadsApi({
 					size: 1,
 				},
 			});
+			const thread = readList(response, 'items')[0];
 			return {
-				threadId: readString(readList(response, 'items')[0], 'id'),
+				threadId: readString(thread, 'id'),
 				updatesCursor: readString(response, 'updates_cursor'),
+				readStates: decodeReadStates(thread, session.self),
 			};
 		},
 		async markRead(threadId, seq) {
