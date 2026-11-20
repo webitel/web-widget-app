@@ -1,4 +1,4 @@
-import { WidgetError } from '../shared/errors';
+import { tokenError, WidgetError } from '../shared/errors';
 import type { ConnectionState } from '../types/client';
 import { createBrowserWatcher } from './reconnect/browser-watcher';
 import {
@@ -84,13 +84,7 @@ export function createSocket(options: SocketOptions): Socket {
 				);
 			}
 		} catch (cause) {
-			if (socket === ws) {
-				fail(
-					new WidgetError('auth', 'Failed to get access token', {
-						cause,
-					}),
-				);
-			}
+			if (socket === ws) fail(tokenError(cause));
 		}
 	};
 
