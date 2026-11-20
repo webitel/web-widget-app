@@ -1,6 +1,7 @@
 import {
 	countUnread,
 	type Message,
+	type MessageButtons,
 	type WebWidgetClient,
 } from '@webitel/web-widget-core';
 
@@ -199,6 +200,9 @@ export class WebitelChatElement extends HTMLElement {
 		}
 
 		item.append(message.deletedAt ? '(deleted)' : describe(message));
+		if (message.buttons && !message.deletedAt) {
+			item.append(...this.#renderButtons(message, message.buttons));
+		}
 
 		const meta = document.createElement('small');
 		const edited = message.editedAt ? ' · edited' : '';
@@ -210,6 +214,31 @@ export class WebitelChatElement extends HTMLElement {
 
 		if (!message.deletedAt) item.append(...this.#renderActions(message));
 		return item;
+	}
+
+	#renderButtons(message: Message, buttons: MessageButtons) {
+		const client = this.#client;
+		const rows = [
+			...buttons.rows,
+			...(buttons.list?.sections.map((section) => section.buttons) ?? []),
+		];
+		return rows.map((row) => {
+			const line = document.createElement('div');
+			for (const { id, label, action } of row) {
+				const button = document.createElement('button');
+				button.type = 'button';
+				button.textContent = buttons.pressedId === id ? `✓ ${label}` : label;
+				button.addEventListener('click', () => {
+					if (action.type === 'url') window.open(action.url, '_blank');
+					else if (action.type === 'request') {
+						if (action.request === 'location') this.#sendLocation();
+						if (action.request === 'contact') this.#sendContact();
+					} else client?.interactive.press(message.id, id).catch(() => {});
+				});
+				line.append(button);
+			}
+			return line;
+		});
 	}
 
 	#renderActions(message: Message) {

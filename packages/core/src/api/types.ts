@@ -1,6 +1,6 @@
 import type { Session } from '../session/types';
 import type { HttpClient, Socket } from '../transport/types';
-import type { ButtonPress, Variables } from '../types/client';
+import type { Variables } from '../types/client';
 import type {
 	Message,
 	MessageContact,
@@ -8,6 +8,11 @@ import type {
 	MessageRevision,
 } from '../types/message';
 import type { Identity, MemberChange } from '../wire/types';
+
+export interface ButtonPress {
+	code: string;
+	data: string | undefined;
+}
 
 export interface IdentityClaims {
 	sub: string;

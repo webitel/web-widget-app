@@ -68,6 +68,43 @@ export interface MessageReply {
 	deleted: boolean;
 }
 
+export type ButtonAction =
+	| {
+			type: 'callback';
+			data: string | undefined;
+	  }
+	| {
+			type: 'url';
+			url: string;
+	  }
+	| {
+			type: 'request';
+			request: string;
+	  };
+
+export interface MessageButton {
+	id: string;
+	label: string;
+	action: ButtonAction;
+}
+
+export interface MessageButtonSection {
+	title: string | undefined;
+	buttons: MessageButton[];
+}
+
+export interface MessageButtons {
+	rows: MessageButton[][];
+	list:
+		| {
+				title: string | undefined;
+				sections: MessageButtonSection[];
+		  }
+		| undefined;
+	singleUse: boolean;
+	pressedId: string | undefined;
+}
+
 export interface Message {
 	id: string;
 	sendId: string | undefined;
@@ -82,6 +119,7 @@ export interface Message {
 	location: MessageLocation | undefined;
 	contact: MessageContact | undefined;
 	replyTo: MessageReply | undefined;
+	buttons: MessageButtons | undefined;
 	createdAt: number;
 	editedAt: number | undefined;
 	deletedAt: number | undefined;

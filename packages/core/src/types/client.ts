@@ -50,11 +50,6 @@ export interface SendOptions {
 	replyTo?: string | undefined;
 }
 
-export interface ButtonPress {
-	code: string;
-	data?: string | undefined;
-}
-
 export interface MessagesApi {
 	send(text: string, options?: SendOptions): Promise<void>;
 	sendLocation(location: MessageLocation, options?: SendOptions): Promise<void>;
@@ -77,7 +72,7 @@ export interface TypingApi {
 }
 
 export interface InteractiveApi {
-	press(messageId: string, button: ButtonPress): Promise<void>;
+	press(messageId: string, buttonId: string): Promise<void>;
 }
 
 export interface VariablesApi {
