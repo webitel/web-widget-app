@@ -123,6 +123,12 @@ const messages: Array<{
 	cursor: number;
 	message: MockMessage;
 }> = [];
+
+// Like the real history: no version, edits counted in revision_count.
+const historyMessage = ({ version, revisions, ...message }: MockMessage) => ({
+	...message,
+	revision_count: version - 1,
+});
 let threadExists = false;
 let seq = 0;
 let cursor = 0;
@@ -343,7 +349,7 @@ export const handlers = [
 	http.get(`${MOCK_BASE_URL}/v1/:threadId/messages`, async () => {
 		await delay(150);
 		return HttpResponse.json({
-			items: messages.map((item) => item.message).reverse(),
+			items: messages.map((item) => historyMessage(item.message)).reverse(),
 			updates_cursor: String(cursor),
 		});
 	}),
@@ -414,7 +420,7 @@ export const handlers = [
 						thread_id: THREAD_ID,
 						messages: messages
 							.filter((item) => item.cursor > Number(since ?? 0))
-							.map((item) => item.message),
+							.map((item) => historyMessage(item.message)),
 					},
 				],
 			});
