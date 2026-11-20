@@ -11,6 +11,7 @@ import type {
 	MessageType,
 	RevisionAction,
 } from '../types/message';
+import { decodeButtons } from './buttons';
 import { contactOf, isSameIdentity, readIdentity } from './identity';
 import { decodeMemberAction } from './member';
 import {
@@ -60,6 +61,7 @@ export function decodeMessage(
 		location: decodeLocation(field(source, 'location')),
 		contact: decodeContact(field(source, 'contact')),
 		replyTo: decodeReply(field(source, 'reply_to')),
+		buttons: decodeButtons(source),
 		createdAt,
 		editedAt: revisions ? readTime(source, 'edited_at') : undefined,
 		deletedAt:

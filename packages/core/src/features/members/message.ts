@@ -20,6 +20,7 @@ export function createMemberMessage(
 		location: undefined,
 		contact: undefined,
 		replyTo: undefined,
+		buttons: undefined,
 		createdAt: Date.now(),
 		editedAt: undefined,
 		deletedAt: undefined,

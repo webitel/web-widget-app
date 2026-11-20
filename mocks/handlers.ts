@@ -74,6 +74,7 @@ interface ReactionBody {
 
 interface CallbackBody {
 	button_code: string;
+	callback_data?: string;
 }
 
 interface UpdatesBody {
@@ -97,6 +98,7 @@ interface MockContent {
 		phone?: string | undefined;
 		email?: string | undefined;
 	};
+	interactive?: object;
 }
 
 interface MockMessage extends MockContent {
@@ -117,6 +119,10 @@ interface MockMessage extends MockContent {
 		  }
 		| undefined;
 	revisions: MockRevision[];
+	reacted_metadata?: {
+		button_code: string;
+		callback_data: string | undefined;
+	};
 }
 
 const messages: Array<{
@@ -274,6 +280,56 @@ export function operatorLeaves(): void {
 export function operatorSays(text: string): void {
 	threadExists = true;
 	addMessage(operator, text);
+}
+
+export function operatorAsks(): void {
+	threadExists = true;
+	addMessage(operator, {
+		type: 'text',
+		body: 'Was it helpful?',
+		interactive: {
+			markup: {
+				rows: [
+					{
+						buttons: [
+							{
+								id: 'yes',
+								label: 'Yes',
+								callback: {
+									data: 'helpful:yes',
+								},
+							},
+							{
+								id: 'no',
+								label: 'No',
+								callback: {
+									data: 'helpful:no',
+								},
+							},
+						],
+					},
+					{
+						buttons: [
+							{
+								id: 'site',
+								label: 'Open site',
+								url: {
+									url: 'https://webitel.com',
+								},
+							},
+							{
+								id: 'location',
+								label: 'Share location',
+								request: {
+									action: 'location',
+								},
+							},
+						],
+					},
+				],
+			},
+		},
+	});
 }
 
 export function dropConnection(): void {
@@ -525,10 +581,22 @@ export const handlers = [
 		CallbackBody
 	>(
 		`${MOCK_BASE_URL}/v1/messages/interactive/:id/callback`,
-		async ({ request }) => {
-			const { button_code } = await request.json();
+		async ({ params, request }) => {
+			const { button_code, callback_data } = await request.json();
+			const message = findMessage(params.id);
+			if (message) {
+				message.reacted_metadata = {
+					button_code,
+					callback_data,
+				};
+			}
 			setTimeout(() => addMessage(operator, `You pressed ${button_code}`), 500);
-			return HttpResponse.json({});
+			return HttpResponse.json({
+				in_reply_to: params.id,
+				button_code,
+				callback_data,
+				reacted_at: String(Date.now()),
+			});
 		},
 	),
 

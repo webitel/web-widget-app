@@ -2,6 +2,7 @@ import { setupWorker } from 'msw/browser';
 import {
 	dropConnection,
 	handlers,
+	operatorAsks,
 	operatorJoins,
 	operatorLeaves,
 	operatorSays,
@@ -16,6 +17,7 @@ export async function startMockServer(): Promise<void> {
 	Object.assign(window, {
 		mockServer: {
 			operatorSays,
+			operatorAsks,
 			operatorJoins,
 			operatorLeaves,
 			dropConnection,

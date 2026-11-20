@@ -33,6 +33,7 @@ export function createOutgoingMessage(
 		location: content.type === 'location' ? content.location : undefined,
 		contact: content.type === 'contact' ? content.contact : undefined,
 		replyTo,
+		buttons: undefined,
 		createdAt: Date.now(),
 		editedAt: undefined,
 		deletedAt: undefined,
