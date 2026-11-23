@@ -101,6 +101,13 @@ interface MockContent {
 	interactive?: object;
 }
 
+interface MockQuote {
+	message_id: string;
+	body?: string;
+	sender: Peer;
+	is_deleted?: boolean;
+}
+
 interface MockMessage extends MockContent {
 	id: string;
 	send_id: string | undefined;
@@ -111,13 +118,7 @@ interface MockMessage extends MockContent {
 	version: number;
 	edited_at?: number;
 	deleted?: boolean;
-	reply_to:
-		| {
-				message_id: string;
-				body: string;
-				sender: Peer;
-		  }
-		| undefined;
+	reply_to: MockQuote | undefined;
 	revisions: MockRevision[];
 	reacted_metadata?: {
 		button_code: string;
@@ -130,11 +131,28 @@ const messages: Array<{
 	message: MockMessage;
 }> = [];
 
-// Like the real history: no version, edits counted in revision_count.
-const historyMessage = ({ version, revisions, ...message }: MockMessage) => ({
-	...message,
-	revision_count: version - 1,
-});
+const quoteOf = (message: MockMessage): MockQuote =>
+	message.deleted
+		? {
+				message_id: message.id,
+				sender: message.sender,
+				is_deleted: true,
+			}
+		: {
+				message_id: message.id,
+				body: message.body,
+				sender: message.sender,
+			};
+
+// Like the real history: no version, edits counted in revision_count, quotes follow the quoted message.
+const historyMessage = ({ version, revisions, ...message }: MockMessage) => {
+	const quoted = message.reply_to && findMessage(message.reply_to.message_id);
+	return {
+		...message,
+		reply_to: quoted ? quoteOf(quoted) : message.reply_to,
+		revision_count: version - 1,
+	};
+};
 let threadExists = false;
 let seq = 0;
 let cursor = 0;
@@ -186,11 +204,7 @@ const addMessage = (
 			: content),
 		sender,
 		version: 1,
-		reply_to: quoted && {
-			message_id: quoted.id,
-			body: quoted.body,
-			sender: quoted.sender,
-		},
+		reply_to: quoted && quoteOf(quoted),
 		revisions: [],
 	};
 	revise(message, 'CREATED', sender);
@@ -520,9 +534,19 @@ export const handlers = [
 		async ({ request }) => {
 			const { ids } = await request.json();
 			const deletedAt = Date.now();
+			const skipped = ids.flatMap((id) =>
+				findMessage(id)?.deleted
+					? [
+							{
+								id,
+								reason: 'REASON_ALREADY_DELETED',
+							},
+						]
+					: [],
+			);
 			const deleted = ids.flatMap((id) => {
 				const message = findMessage(id);
-				if (!message) return [];
+				if (!message || message.deleted) return [];
 				revise(message, 'DELETED', message.sender);
 				message.body = '';
 				delete message.location;
@@ -539,9 +563,14 @@ export const handlers = [
 					id,
 				];
 			});
+			if (!deleted.length)
+				return HttpResponse.json({
+					skipped,
+				});
 			return HttpResponse.json({
 				deleted_ids: deleted,
 				deleted_at: String(deletedAt),
+				skipped: skipped.length ? skipped : undefined,
 			});
 		},
 	),

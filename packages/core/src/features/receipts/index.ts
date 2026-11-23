@@ -29,7 +29,7 @@ export function createReceiptsFeature(ctx: FeatureContext): ReceiptsFeature {
 
 			store.setState(withHorizon(true, 'read', seq));
 
-			ctx.api.threads.markRead(threadId, seq).catch(ctx.report);
+			ctx.api.threads.markRead(threadId, seq).catch(() => {});
 		},
 	};
 }
