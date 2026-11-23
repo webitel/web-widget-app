@@ -195,7 +195,9 @@ export class WebitelChatElement extends HTMLElement {
 
 		if (message.replyTo) {
 			const quote = document.createElement('blockquote');
-			quote.textContent = message.replyTo.text;
+			quote.textContent = message.replyTo.deleted
+				? '(deleted)'
+				: message.replyTo.text;
 			item.append(quote);
 		}
 

@@ -1,4 +1,4 @@
-import type { Message, MessageStatus } from '../types/message';
+import type { Message, MessageReply, MessageStatus } from '../types/message';
 import type { MessageEdit, MessageList } from './types';
 
 const statusRank: Record<Exclude<MessageStatus, 'failed'>, number> = {
@@ -98,7 +98,7 @@ export function editMessage(
 	key: string,
 	edit: MessageEdit,
 ): MessageList {
-	return updateMessage(list, key, (message) =>
+	const next = updateMessage(list, key, (message) =>
 		edit.version >= message.version
 			? {
 					...message,
@@ -106,6 +106,10 @@ export function editMessage(
 				}
 			: message,
 	);
+	if (next === list) return list;
+	return updateQuotes(next, key, {
+		text: edit.text,
+	});
 }
 
 export function removeMessage(list: MessageList, key: string): MessageList {
@@ -118,7 +122,7 @@ export function deleteMessage(
 	key: string,
 	deletedAt: number | undefined,
 ): MessageList {
-	return updateMessage(list, key, (message) => ({
+	const next = updateMessage(list, key, (message) => ({
 		...message,
 		text: '',
 		images: [],
@@ -127,6 +131,28 @@ export function deleteMessage(
 		contact: undefined,
 		deletedAt: deletedAt ?? Date.now(),
 	}));
+	return updateQuotes(next, key, {
+		text: '',
+		deleted: true,
+	});
+}
+
+// The server keeps reply quotes in sync with the quoted message, so do the same live.
+function updateQuotes(
+	list: MessageList,
+	id: string,
+	quote: Partial<MessageReply>,
+): MessageList {
+	return list.map((message) => {
+		if (message.replyTo?.id !== id) return message;
+		return {
+			...message,
+			replyTo: {
+				...message.replyTo,
+				...quote,
+			},
+		};
+	});
 }
 
 export function setOwnStatusUpTo(

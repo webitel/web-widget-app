@@ -74,7 +74,10 @@ export function createMessagesApi({
 					],
 				},
 			});
-			if (!readList(response, 'deleted_ids').includes(id)) {
+			const alreadyDeleted = readList(response, 'skipped').some(
+				(item) => readString(item, 'reason') === 'REASON_ALREADY_DELETED',
+			);
+			if (!alreadyDeleted && !readList(response, 'deleted_ids').includes(id)) {
 				throw new WidgetError('unknown', 'Message was not deleted', {
 					details: readList(response, 'skipped'),
 				});
