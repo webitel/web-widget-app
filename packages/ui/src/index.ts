@@ -2,6 +2,7 @@ import {
 	countUnread,
 	type Message,
 	type MessageButtons,
+	type MessageSystem,
 	type WebWidgetClient,
 } from '@webitel/web-widget-core';
 
@@ -15,6 +16,7 @@ const template = `
 		ul { list-style: none; margin: 0; padding: 8px; height: 320px; overflow: auto; }
 		li { margin: 4px 0; }
 		li.client { text-align: right; }
+		li.system { text-align: center; color: #888; }
 		small, blockquote { color: #888; }
 		blockquote { margin: 0; padding-left: 6px; border-left: 2px solid #ccc; }
 		li button { font-size: 11px; }
@@ -192,6 +194,10 @@ export class WebitelChatElement extends HTMLElement {
 	#renderMessage(message: Message) {
 		const item = document.createElement('li');
 		item.className = message.author;
+		if (message.system) {
+			item.textContent = describeSystem(message.system);
+			return item;
+		}
 
 		if (message.replyTo) {
 			const quote = document.createElement('blockquote');
@@ -304,6 +310,16 @@ export class WebitelChatElement extends HTMLElement {
 		}
 		return actions;
 	}
+}
+
+const systemActions: Record<MessageSystem['action'], string> = {
+	joined: 'joined the chat',
+	left: 'left the chat',
+	unknown: 'updated the chat',
+};
+
+function describeSystem({ action, name }: MessageSystem): string {
+	return `${name ?? 'Operator'} ${systemActions[action]}`;
 }
 
 function describe(message: Message): string {
