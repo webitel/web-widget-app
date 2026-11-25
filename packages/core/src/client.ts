@@ -58,6 +58,7 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 
 	const socket = createSocket({
 		baseUrl: options.baseUrl,
+		url: options.socketUrl,
 		token: tokens,
 		decode: (data) => decodeServerEnvelope(data, session.self),
 		onEnvelope({ updatesCursor, event }) {

@@ -10,6 +10,7 @@ export interface TokenProvider {
 
 export interface SocketOptions {
 	baseUrl: string;
+	url?: string | undefined;
 	token: TokenProvider;
 	decode: (data: unknown) => ServerEnvelope;
 	onEnvelope: (envelope: ServerEnvelope) => void;
