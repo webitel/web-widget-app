@@ -10,7 +10,9 @@ import type { DisconnectEvent, Socket, SocketOptions } from './types';
 const CONNECT_TIMEOUT = 10_000;
 
 export function createSocket(options: SocketOptions): Socket {
-	const url = `${options.baseUrl.replace(/\/+$/, '').replace(/^http/, 'ws')}/ws/im`;
+	const url =
+		options.url ??
+		`${options.baseUrl.replace(/\/+$/, '').replace(/^http/, 'ws')}/ws/im`;
 
 	let ws: WebSocket | null = null;
 	let state: ConnectionState = 'idle';

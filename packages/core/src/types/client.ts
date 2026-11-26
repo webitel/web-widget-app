@@ -11,6 +11,8 @@ import type { KeyValueStorage } from './storage';
 
 export interface ClientOptions {
 	baseUrl: string;
+	// Defaults to baseUrl + /ws/im.
+	socketUrl?: string | undefined;
 	channelId: string;
 	auth: AuthProvider | IdentityAuth;
 	captcha?: CaptchaOptions;

@@ -8,7 +8,7 @@ import type {
 } from './types';
 import { upload } from './upload';
 
-const CAPTCHA_ACTION = 'auth_token';
+const CAPTCHA_ACTION = 'login';
 
 interface HeaderOptions {
 	anonymous?: boolean | undefined;

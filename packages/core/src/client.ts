@@ -34,11 +34,15 @@ import type { ServerEvents } from './wire/types';
 export function createClient(options: ClientOptions): WebWidgetClient {
 	const emitter = createEmitter<ClientEvents>();
 	const events = createEmitter<ServerEvents>();
-	const storage = options.storage ?? createStorage();
+	const tabScope = `webitel-widget:${options.channelId}`;
+	const storage =
+		options.storage ??
+		createStorage({
+			prefix: `${tabScope}:`,
+		});
 	const cursor = createCursor(storage);
 	const store = createStore(initialChatState);
 	const session = createSession(() => api.auth.me());
-	const tabScope = `webitel-widget:${options.channelId}`;
 	const tabs = createTabChannel(tabScope);
 	let connectionState: ConnectionState = 'idle';
 
@@ -58,6 +62,7 @@ export function createClient(options: ClientOptions): WebWidgetClient {
 
 	const socket = createSocket({
 		baseUrl: options.baseUrl,
+		url: options.socketUrl,
 		token: tokens,
 		decode: (data) => decodeServerEnvelope(data, session.self),
 		onEnvelope({ updatesCursor, event }) {
