@@ -9,10 +9,24 @@ export default defineConfig(({ mode }) => {
 
 	return {
 		plugins: [
-			vue(),
+			// [Claude] Every SFC, ours and ui-sdk's, compiles in custom-element mode: its <style> becomes a string that Vue adds into the widget's shadow root instead of a CSS file the page would load.
+			vue({
+				features: {
+					customElement: true,
+				},
+			}),
 		],
 		resolve: {
 			alias: shadowAliases,
+			// [Claude] When @webitel/ui-sdk is `npm link`ed, its files resolve packages from the ui-sdk repo's own node_modules, which would bundle a second Vue and PrimeVue next to the widget's. These always come from the widget's copy; @primeuix/styled holds PrimeVue's theme state, so it must be shared too.
+			dedupe: [
+				'vue',
+				'vue-i18n',
+				'primevue',
+				'@primevue/core',
+				'@primeuix/styled',
+				'@primeuix/utils',
+			],
 		},
 		// [Claude] Vue is bundled into both builds, and library mode leaves `process.env.NODE_ENV` as is, which would throw in the browser.
 		define: {

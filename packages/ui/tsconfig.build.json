@@ -6,7 +6,11 @@
 		"emitDeclarationOnly": true,
 		"outDir": "dist",
 		"rootDir": "src",
-		"paths": {}
+		"paths": {
+			"vue": [
+				"../../node_modules/vue"
+			]
+		}
 	},
 	"exclude": [
 		"src/**/*.test.ts"

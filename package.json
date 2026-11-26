@@ -10,7 +10,7 @@
 		"build": "npm run build --workspaces",
 		"test": "vitest run --passWithNoTests",
 		"test:watch": "vitest",
-		"typecheck": "npm run typecheck --workspaces && tsc -p tsconfig.json",
+		"typecheck": "npm run typecheck --workspaces && vue-tsc -p tsconfig.json",
 		"lint": "biome ci .",
 		"lint:fix": "biome check --write .",
 		"lint:package": "npm run lint:package --workspaces",
