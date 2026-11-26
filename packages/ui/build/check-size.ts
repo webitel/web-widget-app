@@ -11,9 +11,10 @@ type ManifestChunk = {
 };
 
 const KB = 1024;
+// [Claude] Agreed with BA on 2026-11-26 after measuring popular chat widgets: Crisp and tawk.to load ~130–265 KB with the page and add ~70–170 KB on open.
 const BUDGETS = {
-	initial: 50 * KB,
-	lazy: 300 * KB,
+	initial: 350 * KB,
+	lazy: 150 * KB,
 };
 
 const outDir = new URL('../dist/script/', import.meta.url);
@@ -61,27 +62,63 @@ for (const id of initialIds) {
 	lazyIds.delete(id);
 }
 
-const sum = (files: Set<string>): number =>
-	[
-		...files,
-	].reduce((total, file) => total + gzipSize(file), 0);
+type Part = keyof typeof BUDGETS;
 
-const sizes = {
-	initial: sum(filesOf(initialIds)),
-	lazy: sum(filesOf(lazyIds)),
+const DESCRIPTIONS: Record<Part, string> = {
+	initial: 'downloaded by every page with the widget',
+	lazy: 'downloaded on first open of the chat window',
 };
 
-let isOverBudget = false;
-for (const key of Object.keys(BUDGETS) as Array<keyof typeof BUDGETS>) {
-	const size = sizes[key];
-	const budget = BUDGETS[key];
-	const isOver = size > budget;
-	isOverBudget ||= isOver;
+const formatKb = (bytes: number): string => `${(bytes / KB).toFixed(1)} KB`;
+
+const measure = (ids: Iterable<string>) => {
+	const files = [
+		...filesOf(ids),
+	]
+		.map((file) => ({
+			file,
+			size: gzipSize(file),
+		}))
+		.sort((a, b) => b.size - a.size);
+	return {
+		files,
+		total: files.reduce((total, { size }) => total + size, 0),
+	};
+};
+
+const parts: Record<Part, ReturnType<typeof measure>> = {
+	initial: measure(initialIds),
+	lazy: measure(lazyIds),
+};
+
+console.log('Size check of the site script (dist/script), gzip:');
+const failures: string[] = [];
+for (const part of Object.keys(BUDGETS) as Part[]) {
+	const { total, files } = parts[part];
+	const budget = BUDGETS[part];
+	const isOver = total > budget;
 	console.log(
-		`${isOver ? '✗' : '✓'} ${key}: ${(size / KB).toFixed(1)} KB gzip (budget ${budget / KB} KB)`,
+		`  ${isOver ? '✗' : '✓'} ${part}: ${formatKb(total)} of ${formatKb(budget)} (${DESCRIPTIONS[part]})`,
 	);
+	if (isOver) {
+		failures.push(
+			`${part} is ${formatKb(total - budget)} over its ${formatKb(budget)} budget. Largest files: ${files
+				.slice(0, 3)
+				.map(({ file, size }) => `${file} ${formatKb(size)}`)
+				.join(', ')}`,
+		);
+	}
 }
 
-if (isOverBudget) {
+if (failures.length) {
+	console.error(
+		[
+			'',
+			'✗ Bundle too big: the build passed, but the site script exceeds its size budget.',
+			...failures.map((failure) => `  - ${failure}`),
+			'  Budgets are set in packages/ui/build/check-size.ts.',
+			'',
+		].join('\n'),
+	);
 	process.exitCode = 1;
 }
