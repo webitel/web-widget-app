@@ -9,11 +9,15 @@
 			],
 			"@webitel/web-widget-ui": [
 				"./packages/ui/src/index.ts"
+			],
+			"vue": [
+				"./node_modules/vue"
 			]
 		}
 	},
 	"include": [
 		"mocks",
-		"examples"
+		"examples",
+		"packages/ui/src/env.d.ts"
 	]
 }
