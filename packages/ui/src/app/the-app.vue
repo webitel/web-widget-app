@@ -7,10 +7,11 @@
 
 <script setup lang="ts">
 import type { WebWidgetClient } from '@webitel/web-widget-core';
-import { type PropType, useShadowRoot } from 'vue';
+import { type PropType, toRef, useShadowRoot } from 'vue';
+import { provideWidgetClient } from '../composables/widget-client';
 import { setupShadowRoot } from '../shadow';
 
-defineProps({
+const props = defineProps({
 	client: {
 		type: Object as PropType<WebWidgetClient | null>,
 		default: null,
@@ -22,6 +23,8 @@ const shadowRoot = useShadowRoot();
 if (shadowRoot) {
 	setupShadowRoot(shadowRoot);
 }
+
+provideWidgetClient(toRef(props, 'client'));
 </script>
 
 <style>
