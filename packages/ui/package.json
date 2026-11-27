@@ -16,13 +16,17 @@
 			"import": "./dist/index.js"
 		}
 	},
+	"unpkg": "./dist/script/webitel-widget.js",
+	"jsdelivr": "./dist/script/webitel-widget.js",
 	"files": [
-		"dist"
+		"dist",
+		"!dist/**/.vite"
 	],
 	"scripts": {
-		"build": "vite build && tsc -p tsconfig.build.json",
+		"build": "vite build && vite build --mode script && tsc -p tsconfig.build.json && npm run size",
 		"typecheck": "tsc -p tsconfig.json",
-		"lint:package": "publint"
+		"lint:package": "publint",
+		"size": "node build/check-size.ts"
 	},
 	"peerDependencies": {
 		"@webitel/web-widget-core": "0.0.1"

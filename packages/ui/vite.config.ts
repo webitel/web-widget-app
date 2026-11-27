@@ -1,67 +1,51 @@
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import vue from '@vitejs/plugin-vue';
 import { defineConfig } from 'vitest/config';
+import { shadowAliases } from './build/shadow-aliases.ts';
 
-const fromHere = (path: string): string =>
-	fileURLToPath(new URL(path, import.meta.url));
+// [Claude] Two builds of the same sources. The default one is the npm package: core stays external, the site's bundler resolves it. `--mode script` is the single file for sites (dist/script/webitel-widget.js): core included, loaded with one <script type="module"> tag. It stays an ES module, not IIFE, so the chat window can still be split into a chunk that loads on first open.
+export default defineConfig(({ mode }) => {
+	const isScript = mode === 'script';
 
-// [Claude] The real file behind `primevue/tooltip`, so src/shadow/shadow-tooltip.ts can extend it without the alias pointing back at itself.
-const originalTooltip = createRequire(import.meta.url).resolve(
-	'primevue/tooltip',
-);
-
-export default defineConfig({
-	plugins: [
-		vue(),
-	],
-	resolve: {
-		// [Claude] Shadow DOM support for ui-sdk (see src/shadow): PrimeVue's style injection, its overlay Portal and v-tooltip are swapped for versions that target the widget's shadow root instead of document.head / document.body. The aliases also apply inside pre-bundled dependencies and the library build.
-		alias: [
-			{
-				find: /^@primevue\/core\/usestyle$/,
-				replacement: fromHere('./src/shadow/shadow-use-style.ts'),
-			},
-			{
-				find: /^primevue\/usestyle$/,
-				replacement: fromHere('./src/shadow/shadow-use-style.ts'),
-			},
-			{
-				find: /^primevue\/portal$/,
-				replacement: fromHere('./src/shadow/shadow-portal.ts'),
-			},
-			{
-				find: /^primevue\/tooltip$/,
-				replacement: fromHere('./src/shadow/shadow-tooltip.ts'),
-			},
-			{
-				find: /^@primevue-original\/tooltip$/,
-				replacement: originalTooltip,
-			},
+	return {
+		plugins: [
+			vue(),
 		],
-	},
-	build: {
-		lib: {
-			entry: 'src/index.ts',
-			formats: [
-				'es',
-			],
-			fileName: 'index',
+		resolve: {
+			alias: shadowAliases,
 		},
-		sourcemap: true,
-		rollupOptions: {
-			external: [
-				'@webitel/web-widget-core',
-			],
+		// [Claude] Vue is bundled into both builds, and library mode leaves `process.env.NODE_ENV` as is, which would throw in the browser.
+		define: {
+			'process.env.NODE_ENV': JSON.stringify('production'),
 		},
-	},
-	test: {
-		name: 'ui',
-		environment: 'happy-dom',
-		alias: {
-			'@webitel/web-widget-core': fileURLToPath(
-				new URL('../core/src/index.ts', import.meta.url),
-			),
+		build: {
+			lib: {
+				entry: isScript ? 'src/script.ts' : 'src/index.ts',
+				formats: [
+					'es',
+				],
+				fileName: isScript ? 'webitel-widget' : 'index',
+			},
+			outDir: isScript ? 'dist/script' : 'dist',
+			sourcemap: true,
+			// [Claude] Read by build/check-size.ts to tell what loads with the page from what loads later.
+			manifest: isScript,
+			rollupOptions: {
+				external: isScript
+					? []
+					: [
+							'@webitel/web-widget-core',
+						],
+			},
 		},
-	},
+		test: {
+			name: 'ui',
+			environment: 'happy-dom',
+			alias: {
+				'@webitel/web-widget-core': fileURLToPath(
+					new URL('../core/src/index.ts', import.meta.url),
+				),
+			},
+		},
+	};
 });
