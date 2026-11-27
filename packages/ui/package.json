@@ -16,19 +16,31 @@
 			"import": "./dist/index.js"
 		}
 	},
+	"unpkg": "./dist/script/webitel-widget.js",
+	"jsdelivr": "./dist/script/webitel-widget.js",
 	"files": [
-		"dist"
+		"dist",
+		"!dist/**/.vite"
 	],
 	"scripts": {
-		"build": "vite build && tsc -p tsconfig.build.json",
-		"typecheck": "tsc -p tsconfig.json",
-		"lint:package": "publint"
+		"build": "vite build && vite build --mode script && vue-tsc -p tsconfig.build.json && npm run size",
+		"typecheck": "vue-tsc -p tsconfig.json",
+		"lint:package": "publint",
+		"size": "node build/check-size.ts"
 	},
 	"peerDependencies": {
 		"@webitel/web-widget-core": "0.0.1"
 	},
 	"devDependencies": {
-		"@webitel/web-widget-core": "0.0.1"
+		"@vitejs/plugin-vue": "^6.0.11",
+		"@webitel/ui-sdk": "~26.12",
+		"@webitel/web-widget-core": "0.0.1",
+		"clipboard-copy": "^4.0.1",
+		"primelocale": "^2.7.0",
+		"primevue": "^4.5.5",
+		"vue": "^3.5.46",
+		"vue-i18n": "^11.4.23",
+		"vue-tsc": "^3.3.14"
 	},
 	"keywords": [
 		"webitel",

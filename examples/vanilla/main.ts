@@ -1,10 +1,7 @@
 import { createClient } from '@webitel/web-widget-core';
-import {
-	defineWebitelChat,
-	type WebitelChatElement,
-} from '@webitel/web-widget-ui';
 import { startMockServer } from '../../mocks/browser';
 import { MOCK_BASE_URL } from '../../mocks/handlers';
+import { type DebugChatElement, defineDebugChat } from './debug-chat';
 
 await startMockServer();
 
@@ -22,8 +19,8 @@ void client.variables.set({
 	language: 'uk',
 });
 
-defineWebitelChat();
-const chat = document.querySelector<WebitelChatElement>('#chat');
+defineDebugChat();
+const chat = document.querySelector<DebugChatElement>('#chat');
 if (chat) chat.client = client;
 
 client.connect().catch((error) => console.error(error));
